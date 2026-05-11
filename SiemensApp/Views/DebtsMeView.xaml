@@ -1,0 +1,639 @@
+﻿
+<UserControl x:Class="SiemensApp.Views.DebtsMeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" 
+             Background="#F8FAFC" FlowDirection="RightToLeft"
+             FontFamily="Segoe UI Semibold">
+
+	<UserControl.Resources>
+		<Style x:Key="SearchField" TargetType="TextBox">
+			<Setter Property="Background" Value="White"/>
+			<Setter Property="VerticalContentAlignment" Value="Center"/>
+			<Setter Property="FontSize" Value="14"/>
+			<Setter Property="BorderThickness" Value="1"/>
+			<Setter Property="BorderBrush" Value="#E2E8F0"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="TextBox">
+						<Border x:Name="border" CornerRadius="12" Background="{TemplateBinding Background}"
+								BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" SnapsToDevicePixels="True">
+							<Grid Margin="15,0">
+								<ScrollViewer x:Name="PART_ContentHost" Focusable="false" VerticalAlignment="Center"/>
+							</Grid>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsFocused" Value="True">
+								<Setter TargetName="border" Property="BorderBrush" Value="#0284C7"/>
+								<Setter TargetName="border" Property="BorderThickness" Value="2"/>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<Style x:Key="ModernColumnHeader" TargetType="DataGridColumnHeader">
+			<Setter Property="Background" Value="#F1F5F9"/>
+			<Setter Property="Foreground" Value="#475569"/>
+			<Setter Property="Padding" Value="15,12"/>
+			<Setter Property="FontWeight" Value="Bold"/>
+			<Setter Property="FontSize" Value="13"/>
+			<Setter Property="HorizontalContentAlignment" Value="Center"/>
+			<Setter Property="BorderThickness" Value="0,0,0,2"/>
+			<Setter Property="BorderBrush" Value="#E2E8F0"/>
+		</Style>
+
+		<Style x:Key="ModernRow" TargetType="DataGridRow">
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="BorderThickness" Value="0,0,0,1"/>
+			<Setter Property="BorderBrush" Value="#F1F5F9"/>
+			<Setter Property="Margin" Value="0,2"/>
+			<Setter Property="SnapsToDevicePixels" Value="True"/>
+			<Style.Triggers>
+				<Trigger Property="IsMouseOver" Value="True">
+					<Setter Property="Background" Value="#F8FAFC"/>
+					<Setter Property="Cursor" Value="Hand"/>
+				</Trigger>
+				<Trigger Property="IsSelected" Value="True">
+					<Setter Property="Background" Value="#F0F9FF"/>
+					<Setter Property="Foreground" Value="#0369A1"/>
+				</Trigger>
+			</Style.Triggers>
+		</Style>
+
+		<Style x:Key="ModernCell" TargetType="DataGridCell">
+			<Setter Property="Padding" Value="10"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="DataGridCell">
+						<Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderThickness="0" SnapsToDevicePixels="True">
+							<ContentPresenter VerticalAlignment="Center" />
+						</Border>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+			<Style.Triggers>
+				<Trigger Property="IsSelected" Value="True">
+					<Setter Property="Background" Value="Transparent"/>
+					<Setter Property="Foreground" Value="#0369A1"/>
+				</Trigger>
+			</Style.Triggers>
+		</Style>
+	</UserControl.Resources>
+
+    <Grid Margin="35">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,25">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <Grid Width="300" Margin="0,0,15,0">
+                    <TextBox Style="{StaticResource SearchField}" Height="48" x:Name="txtSearchDebt" TextChanged="txtSearchDebt_TextChanged" />
+                    <TextBlock Text="🔍 بحث..." HorizontalAlignment="Left" VerticalAlignment="Center" Margin="15,0" Foreground="#94A3B8" IsHitTestVisible="False"/>
+                </Grid>
+                <Button Click="ShowAddDebt_Click" Height="48" Padding="20,0" Background="#E11D48" Foreground="White">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="12"/>
+                        </Style>
+                    </Button.Resources>
+                    <TextBlock Text="+ إضافة مديون" VerticalAlignment="Center" FontWeight="Bold"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,25">
+            <Border Background="White" CornerRadius="15" Padding="20,15" Margin="0,0,15,0" Width="220" BorderBrush="#E2E8F0" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="إجمالي ما لنا (IQD)" FontSize="12" Foreground="#64748B"/>
+                    <TextBlock x:Name="lblTotalIQD" Text="0 د.ع" FontSize="20" FontWeight="Bold" Foreground="#E11D48" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border Background="White" CornerRadius="15" Padding="20,15" Width="220" BorderBrush="#E2E8F0" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="إجمالي ما لنا (USD)" FontSize="12" Foreground="#64748B"/>
+                    <TextBlock x:Name="lblTotalUSD" Text="$ 0" FontSize="20" FontWeight="Bold" Foreground="#059669" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+        <Border Grid.Row="2" Background="White" CornerRadius="20">
+            <DataGrid x:Name="dgvDebts" 
+              FocusVisualStyle="{x:Null}" 
+              SelectionUnit="FullRow"
+              AutoGenerateColumns="False" 
+              IsReadOnly="True" 
+              GridLinesVisibility="None" 
+              HeadersVisibility="Column" 
+              Background="Transparent" 
+              BorderThickness="0" 
+              RowHeight="60" 
+              AlternatingRowBackground="#F8FAFC" 
+              FontSize="15">
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#F8FAFC"/>
+                        <Setter Property="Foreground" Value="#64748B"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                        <Setter Property="Padding" Value="10"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                    </Style>
+
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Style.Resources>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent" />
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#1E293B" />
+                        </Style.Resources>
+                    </Style>
+
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="DataGridCell">
+                                    <Border Background="{TemplateBinding Background}" BorderThickness="0" SnapsToDevicePixels="True">
+                                        <ContentPresenter VerticalAlignment="Center" />
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="المديون" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border Width="40" Height="40" CornerRadius="20" Background="#F1F5F9">
+                                        <TextBlock Text="👤" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16"/>
+                                    </Border>
+                                    <StackPanel Margin="12,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DebtorName}" FontWeight="Bold" Foreground="#1E293B" FontSize="14"/>
+                                        <TextBlock Text="{Binding PhoneNumber}" Foreground="#64748B" FontSize="11" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+					<DataGridTemplateColumn Width="180">
+						<DataGridTemplateColumn.CellTemplate>
+							<DataTemplate>
+								<Button Click="BtnOpenProfile_Click" Content="فتح السجل 📑" Background="#0284C7" Foreground="White" FontWeight="Bold" Height="35" Width="130">
+									<Button.Resources>
+										<Style TargetType="Border">
+											<Setter Property="CornerRadius" Value="8"/>
+										</Style>
+									</Button.Resources>
+								</Button>
+							</DataTemplate>
+						</DataGridTemplateColumn.CellTemplate>
+					</DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+		<Grid x:Name="UserProfilePage" Grid.RowSpan="3" Visibility="Collapsed" Background="#F8FAFC">
+			<Grid.Resources>
+				<Style x:Key="LogsHeaderStyle" TargetType="DataGridColumnHeader">
+					<Setter Property="Background" Value="#F1F5F9"/>
+					<Setter Property="Foreground" Value="#475569"/>
+					<Setter Property="Padding" Value="15,12"/>
+					<Setter Property="FontWeight" Value="Bold"/>
+					<Setter Property="FontSize" Value="13"/>
+					<Setter Property="HorizontalContentAlignment" Value="Center"/>
+					<Setter Property="BorderThickness" Value="0,0,0,2"/>
+					<Setter Property="BorderBrush" Value="#E2E8F0"/>
+				</Style>
+
+				<Style x:Key="LogsRowStyle" TargetType="DataGridRow">
+					<Setter Property="Background" Value="Transparent"/>
+					<Setter Property="BorderThickness" Value="0,0,0,1"/>
+					<Setter Property="BorderBrush" Value="#F1F5F9"/>
+					<Setter Property="SnapsToDevicePixels" Value="True"/>
+					<Style.Triggers>
+						<Trigger Property="IsMouseOver" Value="True">
+							<Setter Property="Background" Value="#F8FAFC"/>
+						</Trigger>
+
+						<Trigger Property="IsSelected" Value="True">
+							<Setter Property="Background" Value="#F1F5F9"/>
+							<Setter Property="Foreground" Value="#1E293B"/>
+						</Trigger>
+					</Style.Triggers>
+				</Style>
+
+				<Style x:Key="LogsCellStyle" TargetType="DataGridCell">
+					<Setter Property="Padding" Value="15,10"/>
+					<Setter Property="BorderThickness" Value="0"/>
+					<Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+					<Setter Property="Template">
+						<Setter.Value>
+							<ControlTemplate TargetType="DataGridCell">
+								<Border Padding="{TemplateBinding Padding}"
+										Background="{TemplateBinding Background}"
+										BorderThickness="0">
+									<ContentPresenter VerticalAlignment="Center" />
+								</Border>
+							</ControlTemplate>
+						</Setter.Value>
+					</Setter>
+
+					<Style.Triggers>
+						<Trigger Property="IsSelected" Value="True">
+							<Setter Property="Background" Value="Transparent"/>
+							<Setter Property="Foreground" Value="#1E293B"/>
+						</Trigger>
+					</Style.Triggers>
+				</Style>
+			</Grid.Resources>
+
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+
+			<Border Grid.Row="0" Background="White" Padding="25,15" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+				<Grid>
+					<Button Content="⬅ رجوع للقائمة" Click="CloseProfile_Click" HorizontalAlignment="Left" Background="Transparent" BorderThickness="0" Foreground="#64748B" FontWeight="Bold" Cursor="Hand"/>
+					<StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+						<TextBlock Text="سجل حساب: " FontSize="22" Foreground="#64748B"/>
+						<TextBlock x:Name="txtProfileTitle" Text="حسين حافظ" FontSize="22" FontWeight="Bold" Foreground="#1E293B"/>
+					</StackPanel>
+				</Grid>
+			</Border>
+
+			<StackPanel Grid.Row="1" Margin="35,20">
+				<UniformGrid Columns="3" Height="110">
+					<Border Background="#E11D48" CornerRadius="20" Margin="5" Padding="20">
+						<Border.Effect>
+							<DropShadowEffect BlurRadius="15" Color="#E11D48" Opacity="0.3" ShadowDepth="2"/>
+						</Border.Effect>
+						<StackPanel VerticalAlignment="Center">
+							<TextBlock Text="الدين المتبقي الحالي" Foreground="#FFD1D1" FontSize="13" HorizontalAlignment="Center"/>
+							<TextBlock x:Name="lblProfileTotal" Text="0 د.ع" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+						</StackPanel>
+					</Border>
+
+					<Button Click="BtnPayFromProfile_Click" Margin="5" Background="White" BorderBrush="#059669" BorderThickness="2" Cursor="Hand">
+						<Button.Resources>
+							<Style TargetType="Border">
+								<Setter Property="CornerRadius" Value="20"/>
+							</Style>
+						</Button.Resources>
+						<StackPanel>
+							<TextBlock Text="💰" FontSize="24" HorizontalAlignment="Center"/>
+							<TextBlock Text="تسديد مبلغ" FontWeight="Bold" Foreground="#059669" HorizontalAlignment="Center"/>
+						</StackPanel>
+					</Button>
+
+					<StackPanel Margin="5">
+						<Button Click="BtnEditFromProfile_Click" Content="تعديل البيانات" Height="50" Background="#0284C7" Foreground="White" FontWeight="Bold" Margin="0,0,0,5">
+							<Button.Resources>
+								<Style TargetType="Border">
+									<Setter Property="CornerRadius" Value="10"/>
+								</Style>
+							</Button.Resources>
+						</Button>
+						<Button Click="BtnPrintFullStatement_Click" Content="طباعة كشف حساب شامل 📑" Height="50" Background="#1E293B" Foreground="White" FontWeight="Bold" Margin="0,0,0,5">
+							<Button.Resources>
+								<Style TargetType="Border">
+									<Setter Property="CornerRadius" Value="10"/>
+								</Style>
+							</Button.Resources>
+						</Button>
+						<Button Click="BtnDeleteFromProfile_Click" Content="حذف الحساب نهائياً" Height="50" Background="#FEF2F2" Foreground="#E11D48" FontWeight="Bold" BorderBrush="#FEE2E2">
+							<Button.Resources>
+								<Style TargetType="Border">
+									<Setter Property="CornerRadius" Value="10"/>
+								</Style>
+							</Button.Resources>
+						</Button>
+					</StackPanel>
+				</UniformGrid>
+			</StackPanel>
+
+			<Border Grid.Row="2" Background="White" CornerRadius="30,30,0,0" Margin="35,0,35,0" Padding="25">
+				<Border.Effect>
+					<DropShadowEffect BlurRadius="30" Color="#E2E8F0" Opacity="0.4" ShadowDepth="0"/>
+				</Border.Effect>
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+
+					<StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+						<TextBlock Text="📜 كشف حركات الحساب" FontSize="18" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center"/>
+						<Border Background="#F1F5F9" CornerRadius="8" Padding="8,4" Margin="15,0">
+							<TextBlock Text="تحديث تلقائي" FontSize="11" Foreground="#64748B" FontWeight="Bold"/>
+						</Border>
+					</StackPanel>
+
+					<DataGrid Grid.Row="1" x:Name="dgvLogs"
+							  AutoGenerateColumns="False"
+							  IsReadOnly="True"
+							  Background="Transparent"
+							  BorderThickness="0"
+							  GridLinesVisibility="None"
+							  RowHeight="55"
+							  FontSize="14"
+							  ColumnHeaderStyle="{StaticResource LogsHeaderStyle}"
+							  RowStyle="{StaticResource LogsRowStyle}"
+							  CellStyle="{StaticResource LogsCellStyle}">
+						<DataGrid.Columns>
+							<DataGridTemplateColumn Header="نوع العملية" Width="140">
+								<DataGridTemplateColumn.CellTemplate>
+									<DataTemplate>
+										<Border Background="#F1F5F9" CornerRadius="8" Padding="10,5"
+												HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="100">
+											<TextBlock Text="{Binding ActionType}" FontWeight="Bold"
+													   Foreground="#1E293B" FontSize="12" TextAlignment="Center"/>
+										</Border>
+									</DataTemplate>
+								</DataGridTemplateColumn.CellTemplate>
+							</DataGridTemplateColumn>
+
+							<DataGridTemplateColumn Header="التفاصيل" Width="*">
+								<DataGridTemplateColumn.CellTemplate>
+									<DataTemplate>
+										<Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+											<TextBlock Text="{Binding Details}"
+													   Visibility="{Binding IsNormalTextVisible}"
+													   Foreground="#475569" TextAlignment="Center" VerticalAlignment="Center"/>
+
+											<Button Content="📄 فتح الفاتورة"
+        Visibility="{Binding IsInvoiceButtonVisible}"
+        Click="BtnOpenInvoiceFromLog_Click"
+        Tag="{Binding CustomerName}"
+        CommandParameter="{Binding Details}"
+        Background="#0284C7" Foreground="White" FontWeight="Bold"
+        Height="30" Padding="15,0" Cursor="Hand">
+												<Button.Resources>
+													<Style TargetType="Border">
+														<Setter Property="CornerRadius" Value="6"/>
+													</Style>
+												</Button.Resources>
+											</Button>
+										</Grid>
+									</DataTemplate>
+								</DataGridTemplateColumn.CellTemplate>
+							</DataGridTemplateColumn>
+
+							<DataGridTextColumn Header="المبلغ" Binding="{Binding AmountDisplay}" Width="150">
+								<DataGridTextColumn.ElementStyle>
+									<Style TargetType="TextBlock">
+										<Setter Property="FontWeight" Value="Bold"/>
+										<Setter Property="VerticalAlignment" Value="Center"/>
+										<Setter Property="HorizontalAlignment" Value="Center"/>
+										<Setter Property="TextAlignment" Value="Center"/>
+										<Setter Property="Foreground" Value="#0F172A"/>
+									</Style>
+								</DataGridTextColumn.ElementStyle>
+							</DataGridTextColumn>
+
+							<DataGridTextColumn Header="التاريخ والوقت" Binding="{Binding LogDate}" Width="180">
+								<DataGridTextColumn.ElementStyle>
+									<Style TargetType="TextBlock">
+										<Setter Property="VerticalAlignment" Value="Center"/>
+										<Setter Property="HorizontalAlignment" Value="Center"/>
+										<Setter Property="TextAlignment" Value="Center"/>
+										<Setter Property="Foreground" Value="#94A3B8"/>
+										<Setter Property="FontSize" Value="12"/>
+									</Style>
+								</DataGridTextColumn.ElementStyle>
+							</DataGridTextColumn>
+						</DataGrid.Columns>
+					</DataGrid>
+				</Grid>
+			</Border>
+		</Grid>
+        <Grid x:Name="AddDebtCard" Grid.RowSpan="3" Visibility="Collapsed" FlowDirection="RightToLeft">
+            <Border Background="#938BA1" CornerRadius="25" Width="450" Padding="30" VerticalAlignment="Center" Effect="{DynamicResource DropShadowEffect}">
+                <StackPanel>
+                    <TextBlock Text="إضافة سجل جديد" FontSize="22" FontWeight="Bold" Margin="0,0,0,20" Foreground="White" HorizontalAlignment="Center"/>
+
+                    <TextBlock Text="الاسم الكامل" Foreground="White" Margin="5,0"/>
+                    <TextBox Style="{StaticResource SearchField}" Height="45" x:Name="txtDebtorName" Margin="0,5,0,15" VerticalContentAlignment="Center" Padding="10,0"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="رقم الهاتف" Foreground="White" Margin="5,0"/>
+                            <TextBox Style="{StaticResource SearchField}" Height="45" x:Name="txtPhoneNumber" Margin="0,5" VerticalContentAlignment="Center" Padding="10,0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="المبلغ" Foreground="White" Margin="5,0"/>
+                            <Grid Margin="0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox Grid.Column="0" 
+                 Style="{StaticResource SearchField}" 
+                 Height="45" 
+                 x:Name="txtInitialAmount" 
+                 TextChanged="txtInitialAmount_TextChanged" 
+                 VerticalContentAlignment="Center" 
+                 Padding="10,0"/>
+
+                                <Button Grid.Column="1" 
+                x:Name="btnCurrencyToggle" 
+                Content="د.ع" 
+                Click="btnCurrencyToggle_Click" 
+                Width="55" Height="45" 
+                Margin="5,0,0,0" 
+                Background="#7C7389" 
+                Foreground="White" 
+                BorderThickness="0" 
+                Cursor="Hand">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="8"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock x:Name="lblAmountWords" 
+                       Text="صفر دينار عراقي" 
+                       FontSize="13" 
+                       FontWeight="SemiBold"
+                       Foreground="#FFE8E8E8" 
+                       Margin="5,10,5,0" 
+                       TextWrapping="Wrap" 
+                       TextAlignment="Center"/>
+
+                    <Button Click="SaveDebt_Click" 
+                    Content="حفظ البيانات" 
+                    Background="#E11D48" 
+                    Foreground="White" 
+                    Height="50" 
+                    Margin="0,20,0,5" 
+                    FontWeight="Bold" 
+                    Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="12"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <Button Click="HideAddDebt_Click" 
+                    Content="إلغاء" 
+                    Background="Transparent" 
+                    Foreground="#E2E8F0" 
+                    Height="40" 
+                    BorderThickness="0" 
+                    Cursor="Hand"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="PayDebtCard" Grid.RowSpan="3" Visibility="Collapsed">
+            <Grid.Background>
+                <SolidColorBrush Color="#0F172A" Opacity="0.6"/>
+            </Grid.Background>
+
+            <Border Background="White" CornerRadius="24" Width="550" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="750">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,20">
+                            <TextBlock Text="💰 تفاصيل الوصل" FontSize="22" FontWeight="Bold" Foreground="#1E293B" HorizontalAlignment="Right"/>
+                            <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                                <TextBlock Text="رقم الوصل: " Foreground="#64748B"/>
+                                <TextBlock x:Name="txtReceiptNo" Text="00125" FontWeight="Bold" Foreground="#0284C7"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <UniformGrid Columns="3" Margin="0,0,0,15">
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="12" Padding="10" Margin="2">
+                                <StackPanel>
+                                    <TextBlock Text="الرصيد السابق" FontSize="11" Foreground="#64748B" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="txtPrevBalance" Text="0.00" FontWeight="Bold" Foreground="#1E293B" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#F0FDF4" BorderBrush="#DCFCE7" BorderThickness="1" CornerRadius="12" Padding="10" Margin="2">
+                                <StackPanel>
+                                    <TextBlock Text="المبلغ المدفوع" FontSize="11" Foreground="#15803D" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="txtPayDisplay" Text="0.00" FontWeight="Bold" Foreground="#166534" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Background="#FEF2F2" BorderBrush="#FEE2E2" BorderThickness="1" CornerRadius="12" Padding="10" Margin="2">
+                                <StackPanel>
+                                    <TextBlock Text="الرصيد الحالي" FontSize="11" Foreground="#B91C1C" HorizontalAlignment="Center"/>
+                                    <TextBlock x:Name="txtCurrentBalance" Text="0.00" FontWeight="Bold" Foreground="#991B1B" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                            
+                        </UniformGrid>
+
+                        <UniformGrid Columns="2" Margin="0,0,0,10">
+                            <StackPanel Margin="0,0,5,0">
+                                <TextBlock Text="تاريخ الوصل" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                                <TextBox x:Name="txtReceiptDate" IsReadOnly="True" Background="#F8FAFC" Style="{StaticResource SearchField}" Height="35"/>
+                            </StackPanel>
+                            <StackPanel Margin="5,0,0,0">
+                                <TextBlock Text="الوقت" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                                <TextBox x:Name="txtReceiptTime" IsReadOnly="True" Background="#F8FAFC" Style="{StaticResource SearchField}" Height="35"/>
+                            </StackPanel>
+                        </UniformGrid>
+
+                        <Separator Margin="0,10" Background="#E2E8F0"/>
+
+                        <UniformGrid Columns="2" Margin="0,0,0,10">
+                            <StackPanel Margin="5,0,0,0">
+                                <TextBlock Text="عملة الدفع" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="cbPayCurrency" Height="40" SelectedIndex="0">
+                                    <ComboBoxItem Content="د.ع (عراقي)"/>
+                                    <ComboBoxItem Content="$ (دولار)"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </UniformGrid>
+
+                        <UniformGrid Columns="2" Margin="0,0,0,10">
+                            <StackPanel Margin="0,0,5,0">
+                                <TextBlock Text="حساب المدين" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                                <TextBox x:Name="txtDebitAccount" Height="40" Style="{StaticResource SearchField}" Tag="اسم الحساب المالي"/>
+                            </StackPanel>
+                            <StackPanel Margin="5,0,0,0">
+                                <TextBlock Text="المبلغ المستلم رقماً" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                                <TextBox x:Name="txtPayAmountInput" Height="40" FontSize="16" FontWeight="Bold" Style="{StaticResource SearchField}" TextChanged="txtPayAmountInput_TextChanged"/>
+                            </StackPanel>
+                        </UniformGrid>
+
+                        <TextBlock Text="المبلغ كتابةً (تلقائي)" FontSize="12" Foreground="#64748B" Margin="0,10,0,5"/>
+                        <TextBox x:Name="txtWrittenNumber" IsReadOnly="True" Background="#F8FAFC" Height="40" Style="{StaticResource SearchField}" Foreground="#0369A1"/>
+
+                        <UniformGrid Columns="2" Margin="0,10,0,10">
+                            <StackPanel Margin="0,0,5,0">
+                                <TextBlock Text="إيداع بواسطة" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                                <TextBox x:Name="txtDepositedBy" Height="40" Style="{StaticResource SearchField}"/>
+                            </StackPanel>
+                            <StackPanel Margin="5,0,0,0">
+                                <TextBlock Text="سعر الصرف (اختياري)" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                                <TextBox x:Name="txtExchangeRate" Text="150,000" Height="40" Style="{StaticResource SearchField}"/>
+                            </StackPanel>
+                        </UniformGrid>
+
+                        <TextBlock Text="ملاحظات الوصل" FontSize="12" Foreground="#64748B" Margin="0,5"/>
+                        <TextBox x:Name="txtDebtNote" Style="{StaticResource SearchField}" Height="60" TextWrapping="Wrap" AcceptsReturn="True"/>
+
+                        <Border Margin="0,15,0,0" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="0,15,0,0">
+                            <Grid>
+                                <StackPanel HorizontalAlignment="Right">
+                                    <TextBlock Text="توقيع المستلم" FontSize="12" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                                    <Line X1="0" X2="120" Y1="0" Y2="0" 
+          Stroke="#CBD5E1" 
+          StrokeThickness="1" 
+          StrokeDashArray="4 2" 
+          Margin="0,10,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Grid Margin="0,25,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="إصدار الوصل وحفظ PDF" Click="ConfirmAndPrint_Click" Height="50" Margin="0,0,5,0" Background="#0284C7" Foreground="White" FontWeight="Bold">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="12"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                            <Button Grid.Column="1" Content="إلغاء" Click="ClosePayCard_Click" Background="#F1F5F9" Foreground="#64748B" Height="50" Margin="5,0,0,0">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="12"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+    </Grid>
+</UserControl>

@@ -1,0 +1,100 @@
+﻿<Application x:Class="SiemensApp.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+	<Application.Resources>
+		<!-- 1. لوحة ألوان Siemens الاحترافية -->
+		<SolidColorBrush x:Key="SiemensPrimary" Color="#00646E"/>
+		<SolidColorBrush x:Key="SiemensAccent" Color="#009977"/>
+		<SolidColorBrush x:Key="SiemensHover" Color="#F1F3F5"/>
+		<SolidColorBrush x:Key="TextLight" Color="White"/>
+		<SolidColorBrush x:Key="TextDark" Color="#1E293B"/>
+
+		<!-- 2. ستايل القائمة الجانبية (الأقوى والواضح جداً) -->
+		<Style x:Key="ModernMenuStyle" TargetType="RadioButton">
+			<Setter Property="Height" Value="65"/>
+			<Setter Property="Margin" Value="12,5"/>
+			<Setter Property="Background" Value="Transparent"/>
+			<Setter Property="Foreground" Value="#495057"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="RadioButton">
+						<Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="15">
+							<Grid Margin="15,0">
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="45"/>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="6"/>
+								</Grid.ColumnDefinitions>
+
+								<!-- الأيقونة الكبيرة -->
+								<TextBlock Grid.Column="0" Text="{TemplateBinding Tag}"
+                                           FontFamily="Segoe MDL2 Assets" FontSize="24"
+                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+								<!-- النص الضخم والبولد -->
+								<ContentPresenter Grid.Column="1" VerticalAlignment="Center" Margin="15,0,0,0"
+                                                  TextBlock.FontSize="18" TextBlock.FontWeight="ExtraBold"/>
+
+								<!-- مؤشر النشاط البارز -->
+								<Border x:Name="Indicator" Grid.Column="2" Background="{StaticResource SiemensPrimary}"
+                                        CornerRadius="3" Visibility="Collapsed" Height="30"/>
+							</Grid>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="border" Property="Background" Value="{StaticResource SiemensHover}"/>
+								<Setter Property="Foreground" Value="{StaticResource SiemensPrimary}"/>
+							</Trigger>
+							<Trigger Property="IsChecked" Value="True">
+								<Setter TargetName="border" Property="Background" Value="White"/>
+								<Setter Property="Foreground" Value="{StaticResource SiemensPrimary}"/>
+								<Setter TargetName="Indicator" Property="Visibility" Value="Visible"/>
+								<Setter TargetName="border" Property="Effect">
+									<Setter.Value>
+										<DropShadowEffect BlurRadius="20" Opacity="0.1" ShadowDepth="2"/>
+									</Setter.Value>
+								</Setter>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+		<!-- 3. ستايل الأزرار العامة (مثل زر الحفظ أو الإغلاق) -->
+		<Style x:Key="SiemensButtonStyle" TargetType="Button">
+			<Setter Property="Background" Value="{StaticResource SiemensPrimary}"/>
+			<Setter Property="Foreground" Value="White"/>
+			<Setter Property="Height" Value="50"/>
+			<Setter Property="FontSize" Value="16"/>
+			<Setter Property="FontWeight" Value="Bold"/>
+			<Setter Property="Margin" Value="5"/>
+			<Setter Property="Padding" Value="20,0"/>
+			<Setter Property="Cursor" Value="Hand"/>
+			<Setter Property="Template">
+				<Setter.Value>
+					<ControlTemplate TargetType="Button">
+						<Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="12">
+							<ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+						</Border>
+						<ControlTemplate.Triggers>
+							<Trigger Property="IsMouseOver" Value="True">
+								<Setter TargetName="border" Property="Background" Value="{StaticResource SiemensAccent}"/>
+							</Trigger>
+							<Trigger Property="IsPressed" Value="True">
+								<Setter TargetName="border" Property="RenderTransform">
+									<Setter.Value>
+										<ScaleTransform ScaleX="0.97" ScaleY="0.97"/>
+									</Setter.Value>
+								</Setter>
+							</Trigger>
+						</ControlTemplate.Triggers>
+					</ControlTemplate>
+				</Setter.Value>
+			</Setter>
+		</Style>
+
+	</Application.Resources>
+</Application>

@@ -1,0 +1,71 @@
+﻿<Window x:Class="SiemensApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Siemens Management Pro" Height="850" Width="1400"
+        WindowStartupLocation="CenterScreen" Background="#F4F7F9"
+        FlowDirection="RightToLeft" FontFamily="Segoe UI">
+
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="320" />
+			<!-- عرض مثالي للخطوط الكبيرة -->
+			<ColumnDefinition Width="*" />
+		</Grid.ColumnDefinitions>
+
+		<!-- السايد بار (Sidebar) -->
+		<Border Grid.Column="0" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<!-- الهوية -->
+					<RowDefinition Height="*"/>
+					<!-- القائمة -->
+					<RowDefinition Height="Auto"/>
+					<!-- المستخدم -->
+				</Grid.RowDefinitions>
+
+				<!-- قسم الشعار والاسم -->
+				<StackPanel Grid.Row="0" Margin="0,50,0,40">
+					<Border Width="85" Height="85" Background="#00646E" CornerRadius="22" Margin="0,0,0,15">
+						<TextBlock Text="S" Foreground="White" FontSize="52" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+					</Border>
+					<TextBlock Text="SIEMENS" Foreground="#00646E" FontSize="36" FontWeight="Black" HorizontalAlignment="Center"/>
+					<TextBlock Text="نظام الإدارة المتطور" Foreground="#94A3B8" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+				</StackPanel>
+
+				<!-- قائمة التنقل (كاملة الأزرار) -->
+				<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden">
+					<StackPanel Margin="10,0">
+						<!-- الرئيسية -->
+
+						<!-- قسم المخازن -->
+						<TextBlock Text="إدارة العمليات" Foreground="#ABB5C2" FontSize="13" Margin="30,25,0,10" FontWeight="Black"/>
+						<RadioButton Content="إنشاء فاتورة" Style="{StaticResource ModernMenuStyle}" Tag="&#xE82D;" Click="Nav_Click" Name="BtnInvoice"/>
+						<RadioButton Content="المخزن الخارجي" Style="{StaticResource ModernMenuStyle}" Tag="&#xE7B8;" Click="Nav_Click" Name="BtnStorageEx"/>
+						<RadioButton Content="المخزن الداخلي" Style="{StaticResource ModernMenuStyle}" Tag="&#xE149;" Click="Nav_Click" Name="BtnStorageIn"/>
+						<RadioButton Content="إضافة منتج جديد" Style="{StaticResource ModernMenuStyle}" Tag="&#xE710;" Click="Nav_Click" Name="BtnAddProduct"/>
+
+						<!-- قسم الحسابات -->
+						<TextBlock Text="المالية والتقارير" Foreground="#ABB5C2" FontSize="13" Margin="30,25,0,10" FontWeight="Black"/>
+						<RadioButton Content="المبالغ لنا (اطلبهم)" Style="{StaticResource ModernMenuStyle}" Tag="&#xE8A1;" Click="Nav_Click" Name="BtnDebtsMe"/>
+						<RadioButton Content="الديون (علينا)" Style="{StaticResource ModernMenuStyle}" Tag="&#xE8C7;" Click="Nav_Click" Name="BtnDebtsThem"/>
+						<RadioButton Content="سجل الفواتير" Style="{StaticResource ModernMenuStyle}" Tag="&#xE9F9;" Click="Nav_Click" Name="BtnInvoices"/>
+					</StackPanel>
+				</ScrollViewer>
+
+				
+			</Grid>
+		</Border>
+
+		<!-- منطقة المحتوى الرئيسية -->
+		<Border Grid.Column="1" Margin="30" Background="White" CornerRadius="30">
+			<Border.Effect>
+				<DropShadowEffect BlurRadius="45" Opacity="0.07" ShadowDepth="0"/>
+			</Border.Effect>
+			<ContentControl x:Name="MainContentFrame" Margin="25" />
+		</Border>
+	</Grid>
+</Window>

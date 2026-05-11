@@ -1,0 +1,158 @@
+﻿<UserControl x:Class="SiemensApp.Views.StorageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             Background="#F8FAFC" FlowDirection="RightToLeft">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="White" CornerRadius="15" Padding="25,20" Margin="0,0,0,25">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="2" Opacity="0.04" Color="#0F172A"/>
+            </Border.Effect>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <TextBlock Text="المخزن العام" FontSize="22" FontWeight="Bold" Foreground="#0F172A" TextAlignment="Right"/>
+                    <TextBlock Text="إدارة قائمة الأسعار والمخزون الموحد" FontSize="12" Foreground="#64748B" Margin="0,2,0,0" TextAlignment="Right"/>
+                </StackPanel>
+
+                <Border Grid.Column="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" 
+                        CornerRadius="10" Padding="12,0" Margin="30,0" Height="42">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="🔍" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#94A3B8" FontSize="14"/>
+                        <TextBox x:Name="txtSearchStorage" Grid.Column="1" 
+                                 Background="Transparent" BorderThickness="0" 
+                                 VerticalContentAlignment="Center"
+                                 FontSize="14" Foreground="#1E293B"
+                                 TextChanged="txtSearchStorage_TextChanged"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+        <Border Grid.Row="1" Background="White" CornerRadius="15" Padding="10">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="15" ShadowDepth="1" Opacity="0.05"/>
+            </Border.Effect>
+
+            <DataGrid x:Name="dgvStorage" 
+              AutoGenerateColumns="False" 
+              IsReadOnly="True" 
+              GridLinesVisibility="None" 
+              HeadersVisibility="Column"
+              Background="Transparent" 
+              BorderThickness="0"
+              RowHeight="60" 
+              AlternatingRowBackground="#F8FAFC"
+              FontSize="15"
+              SelectionUnit="FullRow"
+              Focusable="False">
+
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridCell">
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Foreground}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="#F1F5F9"/>
+                        <Setter Property="Foreground" Value="#475569"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Padding" Value="15,12"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                    </Style>
+
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#F1F5F9"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="اسم المنتج" Binding="{Binding ProductName}" Width="2*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="20,0"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="السعر المعتمد" Binding="{Binding DefaultPrice, StringFormat='{}{0:#,#.##}'}" Width="*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="FontSize" Value="16"/>
+                                <Setter Property="Foreground" Value="#059669"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTextColumn Header="العملة" Binding="{Binding Currency}" Width="0.7*">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                <Setter Property="Foreground" Value="#64748B"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+
+                    <DataGridTemplateColumn Header="العمليات" Width="180">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button Click="BtnEditProduct_Click" Cursor="Hand" Background="Transparent" BorderThickness="0">
+                                        <Border Background="#F0F9FF" CornerRadius="8" Padding="10,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="✏️" Margin="0,0,5,0"/>
+                                                <TextBlock Text="تعديل" FontSize="12" FontWeight="Bold" Foreground="#0369A1"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Button>
+
+                                    <Button Click="BtnDeleteProduct_Click" Cursor="Hand" Background="Transparent" BorderThickness="0" Margin="8,0,0,0">
+                                        <Border Background="#FEF2F2" CornerRadius="8" Padding="10,6">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="🗑️" Margin="0,0,5,0"/>
+                                                <TextBlock Text="حذف" FontSize="12" FontWeight="Bold" Foreground="#EF4444"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+    </Grid>
+</UserControl>

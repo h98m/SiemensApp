@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <RootNamespace>SiemensApp.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="xunit" Version="2.9.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+  </ItemGroup>
+
+  <!--
+    نُضيف ملفات المنطق القابل للاختبار مباشرةً عبر Compile Include بدل ProjectReference.
+    هذا يُجنّب الاعتماد على Microsoft.WindowsDesktop.App (الذي يحتاج Windows فقط)،
+    ويسمح بتشغيل الاختبارات على أي منصة (CI/CD أو Linux أو Windows).
+  -->
+  <ItemGroup>
+    <Compile Include="..\SiemensApp\Helpers\TafqeetTool.cs" Link="Source\TafqeetTool.cs" />
+    <Compile Include="..\SiemensApp\Services\PasswordHasher.cs" Link="Source\PasswordHasher.cs" />
+    <Compile Include="..\SiemensApp\Services\AuthService.cs" Link="Source\AuthService.cs" />
+    <Compile Include="..\SiemensApp\Services\UserSettingsStore.cs" Link="Source\UserSettingsStore.cs" />
+    <Compile Include="..\SiemensApp\Configuration\AppOptions.cs" Link="Source\AppOptions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
