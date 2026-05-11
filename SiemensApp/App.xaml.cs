@@ -11,6 +11,7 @@ using Serilog;
 using SiemensApp.Configuration;
 using SiemensApp.Data;
 using SiemensApp.Services;
+using SiemensApp.Services.Repositories;
 using SiemensApp.ViewModels;
 using SiemensApp.Views;
 
@@ -116,6 +117,16 @@ public partial class App : Application
         services.AddSingleton<IAuthService, AuthService>();
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<IInvoiceSchemaInitializer, InvoiceSchemaInitializer>();
+
+        // المستودعات (Repository Pattern) — تجريد للوصول إلى قاعدة البيانات
+        // ملاحظة: الـ Repositories ليس Singleton لأنها تأخذ DbContextFactory وتفتح اتصالاً جديداً
+        // لكل عملية. Scoped هو الخيار الصحيح لكنه يتطلّب AsyncScope لكل عملية في WPF لذا
+        // نستخدم Transient — لا تحتفظ بحالة بين الاستدعاءات.
+        services.AddTransient<IProductRepository, ProductRepository>();
+        services.AddTransient<IDebtRepository, DebtRepository>();
+        services.AddTransient<ISaleRecordRepository, SaleRecordRepository>();
+        services.AddTransient<IGlobalStockRepository, GlobalStockRepository>();
+        services.AddTransient<IInternalStockRepository, InternalStockRepository>();
 
         // التنقل (يُسجَّل أعلاه بعد إنشاء MainWindow)
         services.AddSingleton<NavigationService>();
