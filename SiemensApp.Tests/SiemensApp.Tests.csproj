@@ -16,8 +16,9 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
     <PackageReference Include="xunit" Version="2.9.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
   </ItemGroup>
 
   <!--
@@ -30,6 +31,8 @@
     <Compile Include="..\SiemensApp\Services\PasswordHasher.cs" Link="Source\PasswordHasher.cs" />
     <Compile Include="..\SiemensApp\Services\AuthService.cs" Link="Source\AuthService.cs" />
     <Compile Include="..\SiemensApp\Services\UserSettingsStore.cs" Link="Source\UserSettingsStore.cs" />
+    <Compile Include="..\SiemensApp\Services\SqliteConnectionFactory.cs" Link="Source\SqliteConnectionFactory.cs" />
+    <Compile Include="..\SiemensApp\Services\InvoiceSchemaInitializer.cs" Link="Source\InvoiceSchemaInitializer.cs" />
     <Compile Include="..\SiemensApp\Configuration\AppOptions.cs" Link="Source\AppOptions.cs" />
   </ItemGroup>
 
