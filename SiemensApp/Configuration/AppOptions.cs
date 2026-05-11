@@ -30,18 +30,12 @@ public sealed class AuthOptions
 {
     public const string SectionName = "Auth";
 
-    /// <summary>كلمة المرور الافتراضية المستخدمة عند أول تشغيل (يجب تغييرها).</summary>
-    public string DefaultPassword { get; set; } = "199426";
-
-    /// <summary>هاش كلمة المرور (Base64) — يُحفظ في user-config بعد أول تشغيل.</summary>
-    public string PasswordHash { get; set; } = string.Empty;
-
-    /// <summary>الملح (Base64) المرافق للهاش.</summary>
-    public string PasswordSalt { get; set; } = string.Empty;
-
     /// <summary>الحد الأقصى لمحاولات الدخول الفاشلة قبل الحظر المؤقت.</summary>
     public int MaxFailedAttempts { get; set; } = 5;
 
     /// <summary>مدة الحظر المؤقت بالدقائق.</summary>
     public int LockoutMinutes { get; set; } = 5;
+
+    /// <summary>الحد الأدنى لطول كلمة المرور (يُطبَّق في تعيين كلمة المرور لأول مرة وعند تغييرها).</summary>
+    public int MinimumPasswordLength { get; set; } = 6;
 }

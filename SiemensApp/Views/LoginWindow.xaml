@@ -7,6 +7,14 @@
 
 	<Window.Resources>
 		<BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+		<!-- تنسيق موحّد لحقول PasswordBox -->
+		<Style x:Key="PwBoxBorderStyle" TargetType="Border">
+			<Setter Property="CornerRadius" Value="10"/>
+			<Setter Property="Background" Value="#1A000000"/>
+			<Setter Property="BorderBrush" Value="#3300FFD1"/>
+			<Setter Property="BorderThickness" Value="1"/>
+		</Style>
 		<Storyboard x:Key="ShakeAnimation">
 			<DoubleAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" Storyboard.TargetName="MainBorder">
 				<EasingDoubleKeyFrame KeyTime="0:0:0.0" Value="0"/>
@@ -35,14 +43,35 @@
 				<TextBlock Text="🔒" FontSize="45" HorizontalAlignment="Center" Margin="0,0,0,15"/>
 
 				<TextBlock Text="SIEMENS" FontSize="35" FontWeight="ExtraBold" Foreground="#00FFD1"
-                           HorizontalAlignment="Center" FontFamily="Arial Black" Margin="0,0,0,45"/>
+                           HorizontalAlignment="Center" FontFamily="Arial Black" Margin="0,0,0,20"/>
 
-				<!-- حقل الباسورد بتصميم أنعم -->
-				<Border CornerRadius="10" Background="#1A000000" BorderBrush="#3300FFD1" BorderThickness="1">
+				<!-- عنوان فرعي (يتغيّر بين "تسجيل الدخول" و"تعيين كلمة المرور") -->
+				<TextBlock Text="{Binding Title}" Foreground="#94A3B8" FontSize="15"
+                           HorizontalAlignment="Center" Margin="0,0,0,18"/>
+
+				<!-- رسالة مساعدة تظهر فقط في وضع أول تشغيل -->
+				<TextBlock Foreground="#0078D6" FontSize="12" HorizontalAlignment="Center"
+                           Margin="0,0,0,12" TextWrapping="Wrap" TextAlignment="Center"
+                           Visibility="{Binding IsFirstRun, Converter={StaticResource BoolToVis}}">
+					<Run Text="أول تشغيل — عيّن كلمة المرور (حد أدنى "/><Run Text="{Binding MinimumPasswordLength, Mode=OneTime}"/><Run Text=" خانات)"/>
+				</TextBlock>
+
+				<!-- حقل كلمة المرور -->
+				<Border Style="{StaticResource PwBoxBorderStyle}">
 					<PasswordBox x:Name="txtPassword" Height="50" FontSize="26"
                                  Background="Transparent" Foreground="White" BorderThickness="0"
                                  VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
                                  PasswordChanged="OnPasswordChanged"/>
+				</Border>
+
+				<!-- حقل تأكيد كلمة المرور (يظهر فقط في وضع أول تشغيل) -->
+				<Border Style="{StaticResource PwBoxBorderStyle}" Margin="0,12,0,0"
+                        Visibility="{Binding IsFirstRun, Converter={StaticResource BoolToVis}}">
+					<PasswordBox x:Name="txtConfirmPassword" Height="50" FontSize="22"
+                                 Background="Transparent" Foreground="White" BorderThickness="0"
+                                 VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                 PasswordChanged="OnConfirmPasswordChanged"
+                                 ToolTip="أعد إدخال كلمة المرور للتأكيد"/>
 				</Border>
 
 				<!-- رسالة الخطأ المرئية فقط عند الفشل -->
@@ -50,8 +79,8 @@
                            HorizontalAlignment="Center" Margin="0,15,0,0" TextWrapping="Wrap" TextAlignment="Center"
                            Visibility="{Binding IsErrorVisible, Converter={StaticResource BoolToVis}}"/>
 
-				<!-- زر فتح البرنامج: من تركوازي إلى تركوازي غامق -->
-				<Button Content="فـتـح الـنـظـام" IsDefault="True" Command="{Binding LoginCommand}" Height="55" Margin="0,30,0,0"
+				<!-- الزر الرئيسي: "فتح النظام" أو "حفظ وفتح البرنامج" حسب الوضع -->
+				<Button Content="{Binding SubmitButtonText}" IsDefault="True" Command="{Binding SubmitCommand}" Height="55" Margin="0,30,0,0"
                         Cursor="Hand" BorderThickness="0" FontWeight="Bold" FontSize="17">
 					<Button.Style>
 						<Style TargetType="Button">
