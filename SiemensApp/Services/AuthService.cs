@@ -172,6 +172,11 @@ public sealed class AuthService : IAuthService
     {
         ArgumentException.ThrowIfNullOrEmpty(newPassword);
 
+        if (newPassword.Length < MinimumPasswordLength)
+            throw new ArgumentException(
+                $"كلمة المرور قصيرة جداً. الحد الأدنى {MinimumPasswordLength} حروف.",
+                nameof(newPassword));
+
         var settings = _store.Load();
         settings.PasswordSalt = PasswordHasher.GenerateSalt();
         settings.PasswordHash = PasswordHasher.Hash(newPassword, settings.PasswordSalt);

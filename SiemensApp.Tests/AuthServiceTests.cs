@@ -28,9 +28,11 @@ public class AuthServiceTests
         return new AuthService(settings, options, NullLogger<AuthService>.Instance);
     }
 
-    private static AuthService CreateConfiguredService(string initialPassword = "secret-pass")
+    private static AuthService CreateConfiguredService(
+        string initialPassword = "secret-pass",
+        int minPasswordLength = MinPasswordLength)
     {
-        var service = CreateService();
+        var service = CreateService(minPasswordLength: minPasswordLength);
         var setup = service.SetInitialPassword(initialPassword, initialPassword);
         Assert.Equal(SetupResult.Success, setup);
         return service;
@@ -151,6 +153,18 @@ public class AuthServiceTests
     {
         var service = CreateService(minPasswordLength: 0);
         Assert.True(service.MinimumPasswordLength >= 1);
+    }
+
+    [Fact]
+    public void ChangePassword_TooShort_ThrowsArgumentException()
+    {
+        var service = CreateConfiguredService("my-secret-pw", minPasswordLength: 8);
+
+        var ex = Assert.Throws<ArgumentException>(() => service.ChangePassword("short"));
+        Assert.Equal("newPassword", ex.ParamName);
+
+        // كلمة المرور الأصلية لم تتغيّر
+        Assert.Equal(LoginResult.Success, service.Login("my-secret-pw"));
     }
 
     /// <summary>متجر إعدادات في الذاكرة لاستخدام الاختبارات (لا يلامس القرص).</summary>
