@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-linux:
+    name: Test (Linux — net8.0)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore (Tests project)
+        run: dotnet restore SiemensApp.Tests/SiemensApp.Tests.csproj
+
+      - name: Build (Tests project)
+        run: dotnet build SiemensApp.Tests/SiemensApp.Tests.csproj --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: |
+          dotnet test SiemensApp.Tests/SiemensApp.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --logger "trx;LogFileName=test-results.trx" \
+            --logger "console;verbosity=minimal" \
+            --collect:"XPlat Code Coverage"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-linux
+          path: SiemensApp.Tests/TestResults/
+          retention-days: 7
+
+  build-windows:
+    name: Build (Windows — net8.0-windows WPF)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore solution
+        run: dotnet restore SiemensApp.sln
+
+      - name: Build solution (Release)
+        run: dotnet build SiemensApp.sln --configuration Release --no-restore -p:TreatWarningsAsErrors=false
+
+      - name: Run tests (Windows)
+        run: dotnet test SiemensApp.Tests/SiemensApp.Tests.csproj --configuration Release --no-build --logger "console;verbosity=minimal"
+
+  build-windows-targeting-linux:
+    name: Build WPF (Linux — Windows targeting)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore WPF project
+        run: dotnet restore SiemensApp/SiemensApp.csproj -p:EnableWindowsTargeting=true
+
+      - name: Build WPF project (no run, structural check only)
+        run: dotnet build SiemensApp/SiemensApp.csproj --configuration Release --no-restore -p:EnableWindowsTargeting=true
