@@ -45,6 +45,13 @@ public partial class LoginWindow : Window
             _viewModel.Password = pb.Password;
     }
 
+    /// <summary>تحديث تأكيد كلمة المرور (وضع أول تشغيل).</summary>
+    private void OnConfirmPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox pb)
+            _viewModel.ConfirmPassword = pb.Password;
+    }
+
     private void OnShakeRequested()
     {
         if (Resources["ShakeAnimation"] is Storyboard shake)
@@ -52,6 +59,7 @@ public partial class LoginWindow : Window
 
         // مسح كلمة المرور بصرياً وإعادة التركيز
         txtPassword.Clear();
+        txtConfirmPassword.Clear();
         txtPassword.Focus();
     }
 }

@@ -12,6 +12,17 @@ public interface IAuthService
     /// <summary>تغيير كلمة المرور (يُحفظ الهاش في user-settings).</summary>
     void ChangePassword(string newPassword);
 
+    /// <summary>
+    /// تعيين كلمة المرور لأول مرة (عند أول تشغيل، حين لا توجد كلمة مرور محفوظة).
+    /// تُرجع نتيجة تصف نجاح/فشل العملية.
+    /// </summary>
+    SetupResult SetInitialPassword(string newPassword, string confirmPassword);
+
+    /// <summary>
+    /// هل التطبيق يحتاج إلى إعداد أوّلي؟ (لا توجد كلمة مرور محفوظة بعد).
+    /// </summary>
+    bool IsFirstRun { get; }
+
     /// <summary>عدد المحاولات الفاشلة المتبقية قبل الحظر.</summary>
     int RemainingAttempts { get; }
 
@@ -20,6 +31,9 @@ public interface IAuthService
 
     /// <summary>الوقت المتبقي للحظر بالثواني (إذا كان IsLockedOut صحيحاً).</summary>
     int LockoutSecondsRemaining { get; }
+
+    /// <summary>الحد الأدنى المطلوب لطول كلمة المرور (للاستخدام في الـ UI).</summary>
+    int MinimumPasswordLength { get; }
 }
 
 public enum LoginResult
@@ -29,7 +43,24 @@ public enum LoginResult
     /// <summary>كلمة المرور خاطئة.</summary>
     InvalidPassword,
     /// <summary>الحساب محظور بسبب كثرة المحاولات الفاشلة.</summary>
-    LockedOut
+    LockedOut,
+    /// <summary>التطبيق يحتاج إلى تعيين كلمة مرور أوّلية قبل الدخول.</summary>
+    NotConfigured
+}
+
+/// <summary>نتيجة محاولة تعيين كلمة المرور الأولى.</summary>
+public enum SetupResult
+{
+    /// <summary>تمّ تعيين كلمة المرور بنجاح.</summary>
+    Success,
+    /// <summary>كلمة المرور فارغة.</summary>
+    PasswordEmpty,
+    /// <summary>كلمة المرور أقصر من الحد الأدنى المطلوب.</summary>
+    PasswordTooShort,
+    /// <summary>كلمتا المرور غير متطابقتين.</summary>
+    PasswordsDoNotMatch,
+    /// <summary>المحاولة مرفوضة لأن التطبيق سبق وأن تمّ إعداده.</summary>
+    AlreadyConfigured
 }
 
 public sealed class AuthService : IAuthService
@@ -59,6 +90,17 @@ public sealed class AuthService : IAuthService
     public int LockoutSecondsRemaining =>
         IsLockedOut ? Math.Max(0, (int)Math.Ceiling((_lockoutUntilUtc!.Value - DateTime.UtcNow).TotalSeconds)) : 0;
 
+    public int MinimumPasswordLength => Math.Max(1, _options.MinimumPasswordLength);
+
+    public bool IsFirstRun
+    {
+        get
+        {
+            var settings = _store.Load();
+            return string.IsNullOrEmpty(settings.PasswordHash) || string.IsNullOrEmpty(settings.PasswordSalt);
+        }
+    }
+
     public LoginResult Login(string password)
     {
         if (IsLockedOut)
@@ -69,11 +111,14 @@ public sealed class AuthService : IAuthService
 
         var settings = _store.Load();
 
-        bool firstRun = string.IsNullOrEmpty(settings.PasswordHash) || string.IsNullOrEmpty(settings.PasswordSalt);
+        if (string.IsNullOrEmpty(settings.PasswordHash) || string.IsNullOrEmpty(settings.PasswordSalt))
+        {
+            // التطبيق لم يُعَدّ بعد — يجب على المستخدم تعيين كلمة المرور الأولى.
+            _logger.LogInformation("محاولة دخول قبل تعيين كلمة المرور الأولى. التطبيق يحتاج إعداداً أوّلياً.");
+            return LoginResult.NotConfigured;
+        }
 
-        bool isValid = firstRun
-            ? string.Equals(password, _options.DefaultPassword, StringComparison.Ordinal)
-            : PasswordHasher.Verify(password, settings.PasswordSalt, settings.PasswordHash);
+        bool isValid = PasswordHasher.Verify(password, settings.PasswordSalt, settings.PasswordHash);
 
         if (!isValid)
         {
@@ -92,13 +137,6 @@ public sealed class AuthService : IAuthService
             return LoginResult.InvalidPassword;
         }
 
-        // عند أول تشغيل ناجح بكلمة المرور الافتراضية، نرحّلها إلى هاش مُلَمَّح فوراً
-        if (firstRun)
-        {
-            _logger.LogInformation("أول تسجيل دخول ناجح — يتم ترحيل كلمة المرور إلى هاش PBKDF2.");
-            ChangePassword(password);
-        }
-
         settings.LastLoginUtc = DateTime.UtcNow;
         _store.Save(settings);
 
@@ -108,9 +146,36 @@ public sealed class AuthService : IAuthService
         return LoginResult.Success;
     }
 
+    public SetupResult SetInitialPassword(string newPassword, string confirmPassword)
+    {
+        if (!IsFirstRun)
+        {
+            _logger.LogWarning("محاولة تعيين كلمة مرور أولى بعد إعداد التطبيق سابقاً.");
+            return SetupResult.AlreadyConfigured;
+        }
+
+        if (string.IsNullOrEmpty(newPassword))
+            return SetupResult.PasswordEmpty;
+
+        if (newPassword.Length < MinimumPasswordLength)
+            return SetupResult.PasswordTooShort;
+
+        if (!string.Equals(newPassword, confirmPassword, StringComparison.Ordinal))
+            return SetupResult.PasswordsDoNotMatch;
+
+        ChangePassword(newPassword);
+        _logger.LogInformation("تمّ تعيين كلمة المرور الأولى بنجاح.");
+        return SetupResult.Success;
+    }
+
     public void ChangePassword(string newPassword)
     {
         ArgumentException.ThrowIfNullOrEmpty(newPassword);
+
+        if (newPassword.Length < MinimumPasswordLength)
+            throw new ArgumentException(
+                $"كلمة المرور قصيرة جداً. الحد الأدنى {MinimumPasswordLength} حروف.",
+                nameof(newPassword));
 
         var settings = _store.Load();
         settings.PasswordSalt = PasswordHasher.GenerateSalt();

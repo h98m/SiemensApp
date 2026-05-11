@@ -7,65 +7,164 @@ namespace SiemensApp.Tests;
 
 /// <summary>
 /// اختبارات لمنطق <see cref="AuthService"/> — تتحقق من النجاح، رفض كلمة خاطئة،
-/// وإغلاق الحساب بعد عدد من المحاولات الفاشلة.
+/// الحظر بعد محاولات فاشلة، تعيين كلمة المرور لأول مرة، وحالات الرفض المختلفة.
 /// </summary>
 public class AuthServiceTests
 {
-    private static AuthService CreateService(string defaultPassword = "199426", int maxAttempts = 3, int lockoutMinutes = 1)
+    private const int MinPasswordLength = 6;
+
+    private static AuthService CreateService(
+        int maxAttempts = 3,
+        int lockoutMinutes = 1,
+        int minPasswordLength = MinPasswordLength)
     {
         var options = Options.Create(new AuthOptions
         {
-            DefaultPassword = defaultPassword,
             MaxFailedAttempts = maxAttempts,
-            LockoutMinutes = lockoutMinutes
+            LockoutMinutes = lockoutMinutes,
+            MinimumPasswordLength = minPasswordLength
         });
         var settings = new InMemoryUserSettingsStore();
         return new AuthService(settings, options, NullLogger<AuthService>.Instance);
     }
 
+    private static AuthService CreateConfiguredService(
+        string initialPassword = "secret-pass",
+        int minPasswordLength = MinPasswordLength)
+    {
+        var service = CreateService(minPasswordLength: minPasswordLength);
+        var setup = service.SetInitialPassword(initialPassword, initialPassword);
+        Assert.Equal(SetupResult.Success, setup);
+        return service;
+    }
+
+    // ---------- وضع أول تشغيل ----------
+
     [Fact]
-    public void Login_WithDefaultPassword_FirstRunSucceedsAndPersistsHash()
+    public void IsFirstRun_NewService_ReturnsTrue()
     {
         var service = CreateService();
-        var result = service.Login("199426");
+        Assert.True(service.IsFirstRun);
+    }
+
+    [Fact]
+    public void Login_BeforeSetup_ReturnsNotConfigured()
+    {
+        var service = CreateService();
+        var result = service.Login("anything");
+        Assert.Equal(LoginResult.NotConfigured, result);
+    }
+
+    [Fact]
+    public void SetInitialPassword_WithMatchingValidPassword_Succeeds()
+    {
+        var service = CreateService();
+        var result = service.SetInitialPassword("my-secret-pw", "my-secret-pw");
+
+        Assert.Equal(SetupResult.Success, result);
+        Assert.False(service.IsFirstRun);
+    }
+
+    [Fact]
+    public void SetInitialPassword_WithEmptyPassword_ReturnsPasswordEmpty()
+    {
+        var service = CreateService();
+        var result = service.SetInitialPassword(string.Empty, string.Empty);
+        Assert.Equal(SetupResult.PasswordEmpty, result);
+        Assert.True(service.IsFirstRun);
+    }
+
+    [Fact]
+    public void SetInitialPassword_BelowMinimumLength_ReturnsPasswordTooShort()
+    {
+        var service = CreateService(minPasswordLength: 6);
+        var result = service.SetInitialPassword("abc", "abc");
+        Assert.Equal(SetupResult.PasswordTooShort, result);
+        Assert.True(service.IsFirstRun);
+    }
+
+    [Fact]
+    public void SetInitialPassword_WithMismatch_ReturnsPasswordsDoNotMatch()
+    {
+        var service = CreateService();
+        var result = service.SetInitialPassword("my-secret-pw", "other-pw-123");
+        Assert.Equal(SetupResult.PasswordsDoNotMatch, result);
+        Assert.True(service.IsFirstRun);
+    }
+
+    [Fact]
+    public void SetInitialPassword_AfterAlreadyConfigured_ReturnsAlreadyConfigured()
+    {
+        var service = CreateConfiguredService();
+        var result = service.SetInitialPassword("another-pw-456", "another-pw-456");
+        Assert.Equal(SetupResult.AlreadyConfigured, result);
+    }
+
+    // ---------- وضع الدخول العادي ----------
+
+    [Fact]
+    public void Login_WithCorrectPassword_AfterSetup_ReturnsSuccess()
+    {
+        var service = CreateConfiguredService("my-secret-pw");
+        var result = service.Login("my-secret-pw");
         Assert.Equal(LoginResult.Success, result);
     }
 
     [Fact]
     public void Login_WithWrongPassword_ReturnsInvalid()
     {
-        var service = CreateService();
-        var result = service.Login("badpw");
+        var service = CreateConfiguredService("my-secret-pw");
+        var result = service.Login("wrong-pw");
         Assert.Equal(LoginResult.InvalidPassword, result);
     }
 
     [Fact]
     public void Login_AfterMaxFailures_LocksOut()
     {
-        var service = CreateService(maxAttempts: 3);
+        var service = CreateConfiguredService("my-secret-pw");
 
-        // أول محاولتين فاشلتين → InvalidPassword
+        // محاولتان فاشلتان → InvalidPassword
         Assert.Equal(LoginResult.InvalidPassword, service.Login("x"));
         Assert.Equal(LoginResult.InvalidPassword, service.Login("y"));
 
-        // المحاولة الثالثة الفاشلة تتسبب بالحظر
+        // الثالثة الفاشلة تتسبب بالحظر
         Assert.Equal(LoginResult.LockedOut, service.Login("z"));
         Assert.True(service.IsLockedOut);
 
-        // أي محاولة جديدة بعد الحظر تعيد LockedOut حتى لو كانت كلمة المرور صحيحة
-        Assert.Equal(LoginResult.LockedOut, service.Login("199426"));
+        // أي محاولة جديدة بعد الحظر تعيد LockedOut حتى لو كانت صحيحة
+        Assert.Equal(LoginResult.LockedOut, service.Login("my-secret-pw"));
     }
 
     [Fact]
     public void ChangePassword_UpdatesStoredHash()
     {
-        var service = CreateService();
-        service.Login("199426");
-
+        var service = CreateConfiguredService("my-secret-pw");
         service.ChangePassword("new-password-2024");
 
         // كلمة المرور القديمة لم تعد صالحة
-        Assert.Equal(LoginResult.InvalidPassword, service.Login("199426"));
+        Assert.Equal(LoginResult.InvalidPassword, service.Login("my-secret-pw"));
+
+        // الجديدة تنجح
+        Assert.Equal(LoginResult.Success, service.Login("new-password-2024"));
+    }
+
+    [Fact]
+    public void MinimumPasswordLength_DefaultsToAtLeastOne()
+    {
+        var service = CreateService(minPasswordLength: 0);
+        Assert.True(service.MinimumPasswordLength >= 1);
+    }
+
+    [Fact]
+    public void ChangePassword_TooShort_ThrowsArgumentException()
+    {
+        var service = CreateConfiguredService("my-secret-pw", minPasswordLength: 8);
+
+        var ex = Assert.Throws<ArgumentException>(() => service.ChangePassword("short"));
+        Assert.Equal("newPassword", ex.ParamName);
+
+        // كلمة المرور الأصلية لم تتغيّر
+        Assert.Equal(LoginResult.Success, service.Login("my-secret-pw"));
     }
 
     /// <summary>متجر إعدادات في الذاكرة لاستخدام الاختبارات (لا يلامس القرص).</summary>
