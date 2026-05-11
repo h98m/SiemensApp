@@ -16,8 +16,11 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
     <PackageReference Include="xunit" Version="2.9.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
   </ItemGroup>
 
   <!--
@@ -30,7 +33,24 @@
     <Compile Include="..\SiemensApp\Services\PasswordHasher.cs" Link="Source\PasswordHasher.cs" />
     <Compile Include="..\SiemensApp\Services\AuthService.cs" Link="Source\AuthService.cs" />
     <Compile Include="..\SiemensApp\Services\UserSettingsStore.cs" Link="Source\UserSettingsStore.cs" />
+    <Compile Include="..\SiemensApp\Services\SqliteConnectionFactory.cs" Link="Source\SqliteConnectionFactory.cs" />
     <Compile Include="..\SiemensApp\Configuration\AppOptions.cs" Link="Source\AppOptions.cs" />
+    <Compile Include="..\SiemensApp\Models\Product.cs" Link="Source\Models\Product.cs" />
+    <Compile Include="..\SiemensApp\Models\Debt.cs" Link="Source\Models\Debt.cs" />
+    <Compile Include="..\SiemensApp\Models\SaleRecord.cs" Link="Source\Models\SaleRecord.cs" />
+    <Compile Include="..\SiemensApp\Models\GlobalStockItem.cs" Link="Source\Models\GlobalStockItem.cs" />
+    <Compile Include="..\SiemensApp\Models\InternalStockItem.cs" Link="Source\Models\InternalStockItem.cs" />
+    <Compile Include="..\SiemensApp\Data\AppDbContext.cs" Link="Source\Data\AppDbContext.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\IProductRepository.cs" Link="Source\Repositories\IProductRepository.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\ProductRepository.cs" Link="Source\Repositories\ProductRepository.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\IDebtRepository.cs" Link="Source\Repositories\IDebtRepository.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\DebtRepository.cs" Link="Source\Repositories\DebtRepository.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\ISaleRecordRepository.cs" Link="Source\Repositories\ISaleRecordRepository.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\SaleRecordRepository.cs" Link="Source\Repositories\SaleRecordRepository.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\IGlobalStockRepository.cs" Link="Source\Repositories\IGlobalStockRepository.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\GlobalStockRepository.cs" Link="Source\Repositories\GlobalStockRepository.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\IInternalStockRepository.cs" Link="Source\Repositories\IInternalStockRepository.cs" />
+    <Compile Include="..\SiemensApp\Services\Repositories\InternalStockRepository.cs" Link="Source\Repositories\InternalStockRepository.cs" />
   </ItemGroup>
 
   <ItemGroup>
