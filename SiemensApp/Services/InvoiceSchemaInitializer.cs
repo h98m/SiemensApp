@@ -29,6 +29,11 @@ public sealed class InvoiceSchemaInitializer : IInvoiceSchemaInitializer
     {
         await using var connection = await _factory.CreateOpenAsync(cancellationToken).ConfigureAwait(false);
 
+        // 0. PRAGMA — تشغيل وضع WAL وتقليل synchronous إلى NORMAL.
+        //    WAL أسرع للقراءة المتزامنة مع الكتابة، ويحافظ على الـ durability.
+        //    تُحفظ هذه الإعدادات في ملف القاعدة نفسه فلا حاجة لإعادتها كل مرة، لكن آمن أن نضمنها.
+        await ApplyPragmasAsync(connection, cancellationToken).ConfigureAwait(false);
+
         // 1. جدول المخزن العام (GlobalStock)
         await ExecAsync(connection, """
             CREATE TABLE IF NOT EXISTS GlobalStock (
@@ -56,7 +61,54 @@ public sealed class InvoiceSchemaInitializer : IInvoiceSchemaInitializer
         await TryAddColumnAsync(connection, "Invoices", "TotalAmountDollar", "REAL", cancellationToken).ConfigureAwait(false);
         await TryAddColumnAsync(connection, "Invoices", "DollarRate", "REAL", cancellationToken).ConfigureAwait(false);
 
-        _logger.LogDebug("تم التحقق من سكيمة الجداول الإضافية بنجاح.");
+        // 4. فهارس مفيدة على الأعمدة الأكثر استخداماً في الاستعلامات.
+        //    تُتجاهَل في صمت إذا كانت الجداول لم تُنشأ بعد (مثلاً لم يُفتح InvoiceView).
+        await TryCreateIndexAsync(connection, "IX_InternalStock_ProductName", "InternalStock", "ProductName", cancellationToken).ConfigureAwait(false);
+        await TryCreateIndexAsync(connection, "IX_Invoices_Date", "Invoices", "Date", cancellationToken).ConfigureAwait(false);
+        await TryCreateIndexAsync(connection, "IX_Invoices_CustomerName", "Invoices", "CustomerName", cancellationToken).ConfigureAwait(false);
+        await TryCreateIndexAsync(connection, "IX_InvoiceDetails_InvoiceId", "InvoiceDetails", "InvoiceId", cancellationToken).ConfigureAwait(false);
+        await TryCreateIndexAsync(connection, "IX_DebtsMe_DebtorName", "DebtsMe", "DebtorName", cancellationToken).ConfigureAwait(false);
+        await TryCreateIndexAsync(connection, "IX_DebtLogs_DebtorId", "DebtLogs", "DebtorId", cancellationToken).ConfigureAwait(false);
+        await TryCreateIndexAsync(connection, "IX_CustomersList_CustomerName", "CustomersList", "CustomerName", cancellationToken).ConfigureAwait(false);
+        await TryCreateIndexAsync(connection, "IX_CustomerPriceHistory_CN_PN", "CustomerPriceHistory", "CustomerName, ProductName", cancellationToken).ConfigureAwait(false);
+        await TryCreateIndexAsync(connection, "IX_Sales_Date", "Sales", "Date", cancellationToken).ConfigureAwait(false);
+
+        _logger.LogDebug("تم التحقق من سكيمة الجداول الإضافية وفهارسها بنجاح.");
+    }
+
+    private async Task ApplyPragmasAsync(Microsoft.Data.Sqlite.SqliteConnection conn, CancellationToken ct)
+    {
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "PRAGMA journal_mode = WAL;";
+            var mode = (await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false))?.ToString();
+            _logger.LogInformation("SQLite journal_mode set to: {Mode}", mode);
+
+            cmd.CommandText = "PRAGMA synchronous = NORMAL;";
+            await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex)
+        {
+            _logger.LogWarning(ex, "فشل تطبيق PRAGMA على قاعدة البيانات (سيتم المتابعة).");
+        }
+    }
+
+    private async Task TryCreateIndexAsync(
+        Microsoft.Data.Sqlite.SqliteConnection conn,
+        string indexName, string table, string columns,
+        CancellationToken ct)
+    {
+        try
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"CREATE INDEX IF NOT EXISTS {indexName} ON {table} ({columns});";
+            await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException)
+        {
+            // الجدول غير موجود بعد — نتجاهل، سيُنشأ الفهرس عند التشغيل التالي بعد إنشاء الجدول.
+        }
     }
 
     private static async Task ExecAsync(Microsoft.Data.Sqlite.SqliteConnection conn, string sql, CancellationToken ct)
