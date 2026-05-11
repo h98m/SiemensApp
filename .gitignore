@@ -1,0 +1,89 @@
+# ----------------------------------------------------------------------------
+# .gitignore — SiemensApp
+# يمنع رفع ملفات البناء، قاعدة البيانات المحلية، السجلات، النسخ الاحتياطية،
+# مخرجات IDE، وأي ملفات وقت تشغيل خاصة بالمستخدم.
+# ----------------------------------------------------------------------------
+
+# === مخرجات بناء .NET ===
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+[Pp]ublish/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+build/
+bld/
+[Bb]uildLog.*
+*.[Cc]ache
+*.tlog
+*.pdb
+*.dll.config
+*.exe.config
+
+# === ملفات Visual Studio / VS Code / Rider ===
+.vs/
+.vscode/
+.idea/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.userprefs
+*.vsidx
+_UpgradeReport_Files/
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# === مخرجات حزم NuGet (ما عدا الـ packages.lock إن وُجد) ===
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# === ملفات قاعدة البيانات المحلية (لا تُرفع — تُنشأ تلقائياً عند أول تشغيل) ===
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# === مجلدات وقت التشغيل والإعدادات الخاصة بالمستخدم ===
+Backups/
+Logs/
+Desktop/pdf/
+user-settings.json
+**/SiemensApp/Logs/
+**/SiemensApp/Backups/
+
+# === مستندات Word/PDF المولّدة من القوالب ===
+**/Output/*.docx
+**/Output/*.pdf
+
+# === ملفات تشغيل/تطوير محلية ===
+*.log
+*.swp
+*.bak
+*.tmp
+*.orig
+*.rej
+
+# === macOS / Linux ===
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# === تغطية الاختبارات ===
+*.coverage
+*.coveragexml
+coverage.cobertura.xml
+TestResults/
+.cover/
+htmlcov/
