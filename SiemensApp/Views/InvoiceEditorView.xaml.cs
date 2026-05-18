@@ -15,6 +15,7 @@ using System.Windows.Media;
 using Xceed.Words.NET;
 using Xceed.Document.NET;
 using System.Windows.Media.Animation;
+using SiemensApp.Helpers;
 namespace SiemensApp.Views
 {
     public class EditorItem : INotifyPropertyChanged
@@ -56,6 +57,9 @@ namespace SiemensApp.Views
             dgvInvoiceItems.ItemsSource = Items;
             // هذا السطر يراقب الجدول ويحدث المجموع فوراً عند التحميل أو الإضافة
             Items.CollectionChanged += (s, e) => UpdateGrandTotal();
+
+            // ربط معالجة الاتجاه التلقائي للحقول المختلطة (عربي + إنجليزي)
+            BiDiHelper.AttachBiDi(txtInputProduct, txtCustomerName, txtCustomerAddress);
         }
 
         // --- 1. تحميل بيانات الفاتورة ---
@@ -627,22 +631,7 @@ namespace SiemensApp.Views
         }
 
        
-        private string GetSimpleNextNumber()
-        {
-            try
-            {
-                using (var connection = new SqliteConnection(dbPath))
-                {
-                    connection.Open();
-                    var cmd = connection.CreateCommand();
-                    cmd.CommandText = "SELECT MAX(Id) FROM Invoices";
-                    var result = cmd.ExecuteScalar();
-                    int nextId = (result == DBNull.Value) ? 1 : Convert.ToInt32(result) + 1;
-                    return nextId.ToString();
-                }
-            }
-            catch { return "1"; }
-        }
+        private string GetSimpleNextNumber() => UiHelper.GetSimpleNextNumber(dbPath);
         // --- 4. الحفظ والطباعة ---
         
         // حجي هاي الدالة هي اللي تصفي الحساب وتحدث ديون الزبون بدون خبط
@@ -758,23 +747,13 @@ namespace SiemensApp.Views
             try
             {
                 // 1. تحديد القالب البرمجي (تم التحديث ليشمل كل المحلات حجي)
-                string templateFileName = selectedInvoiceType == "وصل محل اجراس" ? "Template1.docx" :
-                          selectedInvoiceType == "وصل محل عصام" ? "Template2.docx" :
-                          selectedInvoiceType == "وصل محل لمسة التكنلوحيا" ? "Template3.docx" :
-                          selectedInvoiceType == "وصل محل المعين" ? "Template4.docx" : "Template.docx";
-
+                string templateFileName = DocxHelper.GetTemplateFileName(selectedInvoiceType);
                 string templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, templateFileName);
-                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string pdfFolderPath = Path.Combine(desktopPath, "pdf");
-                if (!Directory.Exists(pdfFolderPath)) Directory.CreateDirectory(pdfFolderPath);
+                string pdfFolderPath = DocxHelper.EnsurePdfFolder();
 
                 // 2. تجهيز اسم الملف مع التوقيت
-                string displayInvoiceName = selectedInvoiceType == "وصل محل اجراس" ? "وصل محل اجراس" :
-                            selectedInvoiceType == "وصل محل عصام" ? "وصل محل عصام" :
-                            selectedInvoiceType == "وصل محل لمسة التكنلوحيا" ? "وصل محل لمسة التكنلوحيا" :
-                            selectedInvoiceType == "وصل محل المعين" ? "وصل محل المعين" : selectedInvoiceType;
-
-                string safeFileName = Regex.Replace(customerName, @"[\\/:*?""<>|]", "_");
+                string displayInvoiceName = DocxHelper.GetDisplayInvoiceName(selectedInvoiceType);
+                string safeFileName = DocxHelper.SanitizeFileName(customerName);
                 string timeStamp = DateTime.Now.ToString("HH-mm");
                 string wordOutputPath = Path.Combine(pdfFolderPath, $"{displayInvoiceName}_{safeFileName}_{invoiceId}_{timeStamp}.docx");
 
@@ -968,14 +947,7 @@ namespace SiemensApp.Views
                 popSearch.IsOpen = false;
             }
         }
-        private void FillCell(Cell cell, string text, int fontSize)
-        {
-            if (cell.Paragraphs.Count > 0)
-            {
-                cell.Paragraphs[0].RemoveText(0);
-                cell.Paragraphs[0].Append(text).Font("Arial").FontSize(fontSize).Bold().Alignment = Alignment.center;
-            }
-        }
+        private void FillCell(Cell cell, string text, int fontSize) => DocxHelper.FillCell(cell, text, fontSize);
         // --- 5. البحث والتنقل ---
         private void txtCustomerName_TextChanged(object sender, TextChangedEventArgs e) { /* كود البحث */ }
 
@@ -1035,55 +1007,12 @@ namespace SiemensApp.Views
 
         private void ShowToast(string message, string colorHex = "#EF4444")
         {
-            Window t = new Window { WindowStyle = WindowStyle.None, AllowsTransparency = true, Background = Brushes.Transparent, SizeToContent = SizeToContent.WidthAndHeight, Topmost = true, WindowStartupLocation = WindowStartupLocation.CenterScreen };
-            t.Content = new System.Windows.Controls.Border { Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorHex)), CornerRadius = new CornerRadius(10), Padding = new Thickness(20), Child = new TextBlock { Text = message, Foreground = Brushes.White, FontWeight = FontWeights.Bold } };
-            t.Show(); var tm = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-            tm.Tick += (s, ev) => { t.Close(); tm.Stop(); }; tm.Start();
+            UiHelper.ShowToast(message, colorHex);
         }
 
         private void txtInvoiceNumber_TextChanged(object sender, TextChangedEventArgs e) { }
-        // --- محرك التحويل الصامت حجي ---
-        private string ConvertWordToPdfUsingLibre(string docxPath)
-        {
-            string sofficePath = FindLibreOfficePath();
-            if (string.IsNullOrEmpty(sofficePath)) return "";
+        private string ConvertWordToPdfUsingLibre(string docxPath) => DocxHelper.ConvertWordToPdf(docxPath);
 
-            string pdfPath = Path.ChangeExtension(docxPath, ".pdf");
-            var psi = new ProcessStartInfo
-            {
-                FileName = sofficePath,
-                Arguments = $"--headless --nologo --nodefault --convert-to pdf --outdir \"{Path.GetDirectoryName(pdfPath)}\" \"{docxPath}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-
-            try
-            {
-                using (var p = Process.Start(psi)) { p?.WaitForExit(20000); }
-                return pdfPath;
-            }
-            catch { return ""; }
-        }
-
-        // --- دالة البحث عن المحرك اللي خليته بصف البرنامج حجي ---
-        private string FindLibreOfficePath()
-        {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string portable = Path.Combine(baseDir, "LibreOffice", "program", "soffice.exe");
-            if (File.Exists(portable)) return portable;
-
-            try
-            {
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\soffice.exe"))
-                {
-                    if (key != null) return key.GetValue("")?.ToString();
-                }
-            }
-            catch { }
-
-            string[] common = { @"C:\Program Files\LibreOffice\program\soffice.exe", @"C:\Program Files (x86)\LibreOffice\program\soffice.exe" };
-            return common.FirstOrDefault(File.Exists);
-        }
+        private string FindLibreOfficePath() => DocxHelper.FindLibreOfficePath();
     }
 }
