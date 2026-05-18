@@ -222,7 +222,8 @@ CREATE TABLE IF NOT EXISTS AppSettings (
             catch { /* إذا العمود موجود راح يطلع خطأ فنسوي له تجاهل */ }
         }
 
-        private void FillCell(Xceed.Document.NET.Cell cell, string text, int fontSize) => DocxHelper.FillCell(cell, text, fontSize);
+        private void FillCell(Xceed.Document.NET.Cell cell, string text, int fontSize) =>
+            DocxHelper.FillCell(cell, text, fontSize, fontName: "Arial", bold: true, verticalCenter: true);
 
 
 

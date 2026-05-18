@@ -631,7 +631,22 @@ namespace SiemensApp.Views
         }
 
        
-        private string GetSimpleNextNumber() => UiHelper.GetSimpleNextNumber(dbPath);
+        private string GetSimpleNextNumber()
+        {
+            try
+            {
+                using (var connection = new SqliteConnection(dbPath))
+                {
+                    connection.Open();
+                    var cmd = connection.CreateCommand();
+                    cmd.CommandText = "SELECT MAX(Id) FROM Invoices";
+                    var result = cmd.ExecuteScalar();
+                    int nextId = (result == DBNull.Value) ? 1 : Convert.ToInt32(result) + 1;
+                    return nextId.ToString();
+                }
+            }
+            catch { return "1"; }
+        }
         // --- 4. الحفظ والطباعة ---
         
         // حجي هاي الدالة هي اللي تصفي الحساب وتحدث ديون الزبون بدون خبط
@@ -947,7 +962,8 @@ namespace SiemensApp.Views
                 popSearch.IsOpen = false;
             }
         }
-        private void FillCell(Cell cell, string text, int fontSize) => DocxHelper.FillCell(cell, text, fontSize);
+        private void FillCell(Cell cell, string text, int fontSize) =>
+            DocxHelper.FillCell(cell, text, fontSize, fontName: "Arial", bold: true);
         // --- 5. البحث والتنقل ---
         private void txtCustomerName_TextChanged(object sender, TextChangedEventArgs e) { /* كود البحث */ }
 

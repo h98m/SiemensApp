@@ -15,7 +15,8 @@ namespace SiemensApp.Helpers
         /// <summary>
         /// تعبئة خلية في جدول Word بنص منسق
         /// </summary>
-        public static void FillCell(Cell cell, string text, double fontSize)
+        public static void FillCell(Cell cell, string text, double fontSize,
+            string fontName = "Arabic Transparent", bool bold = false, bool verticalCenter = false)
         {
             try
             {
@@ -23,17 +24,22 @@ namespace SiemensApp.Helpers
                 {
                     cell.Paragraphs[0].ReplaceText(cell.Paragraphs[0].Text, "");
                     var p = cell.Paragraphs[0].Append(text ?? "");
-                    p.Font(new Xceed.Document.NET.Font("Arabic Transparent"));
+                    p.Font(new Xceed.Document.NET.Font(fontName));
                     p.FontSize(fontSize);
+                    if (bold) p.Bold();
                     p.Alignment = Alignment.center;
                 }
                 else
                 {
                     var p = cell.InsertParagraph(text ?? "");
-                    p.Font(new Xceed.Document.NET.Font("Arabic Transparent"));
+                    p.Font(new Xceed.Document.NET.Font(fontName));
                     p.FontSize(fontSize);
+                    if (bold) p.Bold();
                     p.Alignment = Alignment.center;
                 }
+
+                if (verticalCenter)
+                    cell.VerticalAlignment = Xceed.Document.NET.VerticalAlignment.Center;
             }
             catch { }
         }
