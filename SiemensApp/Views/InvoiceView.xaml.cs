@@ -631,10 +631,10 @@ CREATE TABLE IF NOT EXISTS AppSettings (
 
                         long invId = Convert.ToInt64(cmd.ExecuteScalar());
 
-                        // 3. حفظ التفاصيل وخصم المخزن (المرحلة المهمة حجي)
+                        // 3. حفظ التفاصيل وحفظ المنتجات بالمخزن وخصم الكمية (المرحلة المهمة حجي)
                         foreach (var item in Items)
                         {
-                            // حفظ المادة
+                            // حفظ المادة بتفاصيل الفاتورة
                             var cmdD = connection.CreateCommand();
                             cmdD.Transaction = tran;
                             cmdD.CommandText = @"INSERT INTO InvoiceDetails (InvoiceId, ProductName, Price, Qty, Total, UnitType, Currency) 
@@ -647,6 +647,25 @@ CREATE TABLE IF NOT EXISTS AppSettings (
                             cmdD.Parameters.AddWithValue("@ut", item.Type);
                             cmdD.Parameters.AddWithValue("@cur", item.Notes);
                             cmdD.ExecuteNonQuery();
+
+                            // حفظ المنتج بالمخزن العام إذا جان جديد
+                            var cmdCheck = connection.CreateCommand();
+                            cmdCheck.Transaction = tran;
+                            cmdCheck.CommandText = @"SELECT (SELECT COUNT(*) FROM InternalStock WHERE ProductName = @pn) + 
+                                                   (SELECT COUNT(*) FROM GlobalStock WHERE ProductName = @pn)";
+                            cmdCheck.Parameters.AddWithValue("@pn", item.ProductName);
+                            long totalExists = (long)cmdCheck.ExecuteScalar();
+
+                            if (totalExists == 0)
+                            {
+                                var cmdSaveGlobal = connection.CreateCommand();
+                                cmdSaveGlobal.Transaction = tran;
+                                cmdSaveGlobal.CommandText = "INSERT INTO GlobalStock (ProductName, DefaultPrice, Currency) VALUES (@pn, @pr, @cur)";
+                                cmdSaveGlobal.Parameters.AddWithValue("@pn", item.ProductName);
+                                cmdSaveGlobal.Parameters.AddWithValue("@pr", item.Price);
+                                cmdSaveGlobal.Parameters.AddWithValue("@cur", (item.Notes == "$" ? "دولار أمريكي" : "دينار عراقي"));
+                                cmdSaveGlobal.ExecuteNonQuery();
+                            }
 
                             // خصم من المخزن الداخلي حجي
                             var cmdStock = connection.CreateCommand();
@@ -862,25 +881,10 @@ CREATE TABLE IF NOT EXISTS AppSettings (
 
             string currentSymbol = btnCurrencyToggle.IsChecked == true ? "$" : "د.ع";
 
+            // فحص المخزن الداخلي فقط للتنبيه (الحفظ بالمخزن يصير عند الطباعة)
             using (var connection = new SqliteConnection(dbPath))
             {
                 connection.Open();
-                var cmdCheck = connection.CreateCommand();
-                cmdCheck.CommandText = @"SELECT (SELECT COUNT(*) FROM InternalStock WHERE ProductName = @pn) + 
-                                       (SELECT COUNT(*) FROM GlobalStock WHERE ProductName = @pn)";
-                cmdCheck.Parameters.AddWithValue("@pn", productName);
-                long totalExists = (long)cmdCheck.ExecuteScalar();
-
-                if (totalExists == 0)
-                {
-                    var cmdSaveGlobal = connection.CreateCommand();
-                    cmdSaveGlobal.CommandText = "INSERT INTO GlobalStock (ProductName, DefaultPrice, Currency) VALUES (@pn, @pr, @cur)";
-                    cmdSaveGlobal.Parameters.AddWithValue("@pn", productName);
-                    cmdSaveGlobal.Parameters.AddWithValue("@pr", price);
-                    cmdSaveGlobal.Parameters.AddWithValue("@cur", (currentSymbol == "$" ? "دولار أمريكي" : "دينار عراقي"));
-                    cmdSaveGlobal.ExecuteNonQuery();
-                }
-
                 var cmdInternal = connection.CreateCommand();
                 cmdInternal.CommandText = "SELECT Quantity FROM InternalStock WHERE ProductName = @pn";
                 cmdInternal.Parameters.AddWithValue("@pn", productName);
@@ -888,7 +892,7 @@ CREATE TABLE IF NOT EXISTS AppSettings (
 
                 if (stockObj != null && stockObj != DBNull.Value)
                 {
-                    decimal available = Convert.ToDecimal(stockObj); // تحويل لديسيمال
+                    decimal available = Convert.ToDecimal(stockObj);
                     if (q > available)
                     {
                         var result = MessageBox.Show($"حجي المتوفر بالمخزن الداخلي هو ({available}) قطعة فقط.\n\n" +
