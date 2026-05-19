@@ -19,6 +19,7 @@ using System.Windows.Media;
 using Xceed.Document.NET;
 using Xceed.Words.NET;
 using System.Windows.Media.Animation;
+using SiemensApp.Helpers;
 namespace SiemensApp.Views
 {
     public class InvoiceItem : INotifyPropertyChanged
@@ -82,8 +83,11 @@ namespace SiemensApp.Views
             var txtInv = this.FindName("txtInvoiceNumber") as TextBox;
             if (txtInv != null)
             {
-                txtInv.Text = GetSimpleNextNumber();
+                txtInv.Text = UiHelper.GetSimpleNextNumber(dbPath);
             }
+
+            // ربط معالجة الاتجاه التلقائي للحقول المختلطة (عربي + إنجليزي)
+            BiDiHelper.AttachBiDi(txtInputProduct, txtCustomerName, txtCustomerAddress);
         }
         public void InitializeDatabase()
         {
@@ -218,47 +222,25 @@ CREATE TABLE IF NOT EXISTS AppSettings (
             catch { /* إذا العمود موجود راح يطلع خطأ فنسوي له تجاهل */ }
         }
 
-        
+        private void FillCell(Xceed.Document.NET.Cell cell, string text, int fontSize) =>
+            DocxHelper.FillCell(cell, text, fontSize, fontName: "Arial", bold: true, verticalCenter: true);
 
 
 
-        // حجي هاي تخليها مرة وحدة بس بنهاية الكلاس
-        // قمنا بتغيير Cell إلى Xceed.Document.NET.Cell لفض الاشتباك
-        private void FillCell(Xceed.Document.NET.Cell cell, string text, int fontSize)
-        {
-            if (cell.Paragraphs.Count > 0)
-            {
-                var p = cell.Paragraphs[0];
-                p.RemoveText(0, p.Text.Length);
-                p.Append(text).Font("Arial").FontSize(fontSize).Bold().Alignment = Alignment.center;
 
-                // الحل هنا: نكتب المسار الكامل للـ Enum حتى لا يختلط الأمر على المترجم
-                cell.VerticalAlignment = Xceed.Document.NET.VerticalAlignment.Center;
-            }
-        }
         // حجي غيرنا النوع من void إلى string حتى نكدر نستخدم المسار بتحويل الـ PDF
         private string ExportToWord(string customerName, string invoiceId)
         {
             try
             {
                 // 1. تحديد المسارات والقوالب
-                string templateFileName = selectedInvoiceType == "وصل محل اجراس" ? "Template1.docx" :
-                          selectedInvoiceType == "وصل محل عصام" ? "Template2.docx" :
-                          selectedInvoiceType == "وصل محل لمسة التكنلوحيا" ? "Template3.docx" : 
-                          selectedInvoiceType == "وصل محل المعين" ? "Template4.docx" : "Template.docx";// هنا تنتهي الجملة
-
+                string templateFileName = DocxHelper.GetTemplateFileName(selectedInvoiceType);
                 string templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, templateFileName);
-                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string pdfFolderPath = Path.Combine(desktopPath, "pdf");
-                if (!Directory.Exists(pdfFolderPath)) Directory.CreateDirectory(pdfFolderPath);
+                string pdfFolderPath = DocxHelper.EnsurePdfFolder();
 
                 // 2. تحديد الاسم الذي سيظهر في الملف المحفوظ
-                
-                string displayInvoiceName = selectedInvoiceType == "وصل محل اجراس" ? "وصل محل اجراس" :
-                            selectedInvoiceType == "وصل محل عصام" ? "وصل محل عصام" :
-                            selectedInvoiceType == "وصل محل لمسة التكنلوحيا" ? "وصل محل لمسة التكنلوحيا" :
-                            selectedInvoiceType == "وصل محل المعين" ? "وصل محل المعين" : selectedInvoiceType;
-                string safeFileName = Regex.Replace(customerName, @"[\\/:*?""<>|]", "_");
+                string displayInvoiceName = DocxHelper.GetDisplayInvoiceName(selectedInvoiceType);
+                string safeFileName = DocxHelper.SanitizeFileName(customerName);
                 string timeStamp = DateTime.Now.ToString("HH-mm");
                 string fileName = $"{displayInvoiceName}_{safeFileName}_{invoiceId}_{timeStamp}.docx";
                 string finalOutputPath = Path.Combine(pdfFolderPath, fileName);
@@ -401,35 +383,7 @@ CREATE TABLE IF NOT EXISTS AppSettings (
         }
         private void ShowToast(string message, string colorHex = "#EF4444")
         {
-            Window toast = new Window
-            {
-                WindowStyle = WindowStyle.None,
-                AllowsTransparency = true,
-                Background = System.Windows.Media.Brushes.Transparent,
-                SizeToContent = SizeToContent.WidthAndHeight,
-                Topmost = true,
-                ShowInTaskbar = false,
-                WindowStartupLocation = WindowStartupLocation.CenterScreen,
-                Content = new System.Windows.Controls.Border
-                {
-                    Background = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex)),
-                    CornerRadius = new CornerRadius(10),
-                    Padding = new Thickness(25, 12, 25, 12),
-                    Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 15, Opacity = 0.2 },
-                    Child = new TextBlock
-                    {
-                        Text = message,
-                        Foreground = System.Windows.Media.Brushes.White,
-                        FontSize = 16,
-                        FontWeight = FontWeights.Bold,
-                        TextAlignment = TextAlignment.Center
-                    }
-                }
-            };
-            toast.Show();
-            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
-            timer.Tick += (s, e) => { toast.Close(); timer.Stop(); };
-            timer.Start();
+            UiHelper.ShowToast(message, colorHex);
         }
 
         private void txtInputProduct_TextChanged(object sender, TextChangedEventArgs e)
@@ -677,10 +631,10 @@ CREATE TABLE IF NOT EXISTS AppSettings (
 
                         long invId = Convert.ToInt64(cmd.ExecuteScalar());
 
-                        // 3. حفظ التفاصيل وخصم المخزن (المرحلة المهمة حجي)
+                        // 3. حفظ التفاصيل وحفظ المنتجات بالمخزن وخصم الكمية (المرحلة المهمة حجي)
                         foreach (var item in Items)
                         {
-                            // حفظ المادة
+                            // حفظ المادة بتفاصيل الفاتورة
                             var cmdD = connection.CreateCommand();
                             cmdD.Transaction = tran;
                             cmdD.CommandText = @"INSERT INTO InvoiceDetails (InvoiceId, ProductName, Price, Qty, Total, UnitType, Currency) 
@@ -693,6 +647,25 @@ CREATE TABLE IF NOT EXISTS AppSettings (
                             cmdD.Parameters.AddWithValue("@ut", item.Type);
                             cmdD.Parameters.AddWithValue("@cur", item.Notes);
                             cmdD.ExecuteNonQuery();
+
+                            // حفظ المنتج بالمخزن العام إذا جان جديد
+                            var cmdCheck = connection.CreateCommand();
+                            cmdCheck.Transaction = tran;
+                            cmdCheck.CommandText = @"SELECT (SELECT COUNT(*) FROM InternalStock WHERE ProductName = @pn) + 
+                                                   (SELECT COUNT(*) FROM GlobalStock WHERE ProductName = @pn)";
+                            cmdCheck.Parameters.AddWithValue("@pn", item.ProductName);
+                            long totalExists = (long)cmdCheck.ExecuteScalar();
+
+                            if (totalExists == 0)
+                            {
+                                var cmdSaveGlobal = connection.CreateCommand();
+                                cmdSaveGlobal.Transaction = tran;
+                                cmdSaveGlobal.CommandText = "INSERT INTO GlobalStock (ProductName, DefaultPrice, Currency) VALUES (@pn, @pr, @cur)";
+                                cmdSaveGlobal.Parameters.AddWithValue("@pn", item.ProductName);
+                                cmdSaveGlobal.Parameters.AddWithValue("@pr", item.Price);
+                                cmdSaveGlobal.Parameters.AddWithValue("@cur", (item.Notes == "$" ? "دولار أمريكي" : "دينار عراقي"));
+                                cmdSaveGlobal.ExecuteNonQuery();
+                            }
 
                             // خصم من المخزن الداخلي حجي
                             var cmdStock = connection.CreateCommand();
@@ -908,25 +881,10 @@ CREATE TABLE IF NOT EXISTS AppSettings (
 
             string currentSymbol = btnCurrencyToggle.IsChecked == true ? "$" : "د.ع";
 
+            // فحص المخزن الداخلي فقط للتنبيه (الحفظ بالمخزن يصير عند الطباعة)
             using (var connection = new SqliteConnection(dbPath))
             {
                 connection.Open();
-                var cmdCheck = connection.CreateCommand();
-                cmdCheck.CommandText = @"SELECT (SELECT COUNT(*) FROM InternalStock WHERE ProductName = @pn) + 
-                                       (SELECT COUNT(*) FROM GlobalStock WHERE ProductName = @pn)";
-                cmdCheck.Parameters.AddWithValue("@pn", productName);
-                long totalExists = (long)cmdCheck.ExecuteScalar();
-
-                if (totalExists == 0)
-                {
-                    var cmdSaveGlobal = connection.CreateCommand();
-                    cmdSaveGlobal.CommandText = "INSERT INTO GlobalStock (ProductName, DefaultPrice, Currency) VALUES (@pn, @pr, @cur)";
-                    cmdSaveGlobal.Parameters.AddWithValue("@pn", productName);
-                    cmdSaveGlobal.Parameters.AddWithValue("@pr", price);
-                    cmdSaveGlobal.Parameters.AddWithValue("@cur", (currentSymbol == "$" ? "دولار أمريكي" : "دينار عراقي"));
-                    cmdSaveGlobal.ExecuteNonQuery();
-                }
-
                 var cmdInternal = connection.CreateCommand();
                 cmdInternal.CommandText = "SELECT Quantity FROM InternalStock WHERE ProductName = @pn";
                 cmdInternal.Parameters.AddWithValue("@pn", productName);
@@ -934,7 +892,7 @@ CREATE TABLE IF NOT EXISTS AppSettings (
 
                 if (stockObj != null && stockObj != DBNull.Value)
                 {
-                    decimal available = Convert.ToDecimal(stockObj); // تحويل لديسيمال
+                    decimal available = Convert.ToDecimal(stockObj);
                     if (q > available)
                     {
                         var result = MessageBox.Show($"حجي المتوفر بالمخزن الداخلي هو ({available}) قطعة فقط.\n\n" +
@@ -1053,34 +1011,7 @@ CREATE TABLE IF NOT EXISTS AppSettings (
 
 
 
-        private string FindLibreOfficePath()
-        {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            // 1. النسخة المحمولة (تأكد أن المجلد بهذا الاسم بالضبط)
-            string portable = Path.Combine(baseDir, "LibreOffice", "program", "soffice.exe");
-
-            if (File.Exists(portable)) return portable;
-
-            // إذا ما لكاه، نطلع مسج تنبيهي حتى نعرف وين الخلل
-            MessageBox.Show($"أستاذ عقيل، ملف التشغيل غير موجود في:\n{portable}", "تنبيه المسار");
-
-            // 2. البحث في السجل (Registry) - يحتاج أحياناً صلاحيات مسؤول
-            try
-            {
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\soffice.exe"))
-                {
-                    if (key != null) return key.GetValue("")?.ToString();
-                }
-            }
-            catch { }
-
-            // 3. المسارات الافتراضية
-            string[] common = {
-        @"C:\Program Files\LibreOffice\program\soffice.exe",
-        @"C:\Program Files (x86)\LibreOffice\program\soffice.exe"
-    };
-            return common.FirstOrDefault(File.Exists);
-        }
+        private string FindLibreOfficePath() => DocxHelper.FindLibreOfficePath();
 
         // دالة مساعدة لتنظيف الواجهة
         private void ResetUI()
@@ -1121,23 +1052,7 @@ CREATE TABLE IF NOT EXISTS AppSettings (
             // 7. وضع الماوس على اسم الزبون للبدء من جديد
             txtCustomerName.Focus();
         }
-        private string GetSimpleNextNumber()
-        {
-            try
-            {
-                using (var connection = new SqliteConnection(dbPath))
-                {
-                    connection.Open();
-                    var cmd = connection.CreateCommand();
-                    // حجي هنا نجيب أكبر رقم محول إلى عدد صحيح
-                    cmd.CommandText = "SELECT IFNULL(MAX(CAST(InvoiceNumber AS INTEGER)), 0) FROM Invoices";
-                    var result = cmd.ExecuteScalar();
-                    int lastNum = Convert.ToInt32(result);
-                    return (lastNum + 1).ToString();
-                }
-            }
-            catch { return "1"; } // إذا أول مرة نرجع 1
-        }
+        private string GetSimpleNextNumber() => UiHelper.GetSimpleNextNumber(dbPath);
         private void GetCustomerDebtFromDb(string customerName)
         {
             if (string.IsNullOrWhiteSpace(customerName)) return;
@@ -1276,30 +1191,7 @@ CREATE TABLE IF NOT EXISTS AppSettings (
                 e.Handled = true;
             }
         }
-        // حجي هاي الدالة هي المحرك اللي يحول الوورد إلى PDF
-        private string ExportDocxToPdf(string docxPath)
-        {
-            string pdfPath = Path.ChangeExtension(docxPath, ".pdf");
-            string soffice = FindLibreOfficePath();
-
-            if (soffice == null)
-                throw new InvalidOperationException("حجي ليبر أوفيس ما موجود! لازم تثبته أو تخليه بمجلد البرنامج.");
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = soffice,
-                Arguments = $"--headless --convert-to pdf --outdir \"{Path.GetDirectoryName(pdfPath)}\" \"{docxPath}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using (var p = Process.Start(psi))
-            {
-                p.WaitForExit();
-            }
-
-            return pdfPath;
-        }
+        private string ExportDocxToPdf(string docxPath) => DocxHelper.ConvertWordToPdf(docxPath);
 
         
         // 2. دالة فتح القائمة عند ضغط الزر
@@ -1395,33 +1287,7 @@ CREATE TABLE IF NOT EXISTS AppSettings (
             // أهم خطوة: استدعاء دالة تحديث الكلمات فوراً عند تغيير العملة
             txtInputPrice_TextChanged(txtInputPrice, null);
         }
-        private string ConvertWordToPdfUsingLibre(string docxPath)
-        {
-            string sofficePath = FindLibreOfficePath();
-            if (string.IsNullOrEmpty(sofficePath)) return "";
-
-            string pdfPath = Path.ChangeExtension(docxPath, ".pdf");
-
-            var psi = new ProcessStartInfo
-            {
-                FileName = sofficePath,
-                // أوامر التشغيل الصامت حتى ما يظهر البرنامج للمستخدم
-                Arguments = $"--headless --nologo --nodefault --convert-to pdf --outdir \"{Path.GetDirectoryName(pdfPath)}\" \"{docxPath}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-
-            try
-            {
-                using (var p = Process.Start(psi))
-                {
-                    p?.WaitForExit(20000); // ننتظر 20 ثانية كحد أقصى
-                }
-                return File.Exists(pdfPath) ? pdfPath : "";
-            }
-            catch { return ""; }
-        }
+        private string ConvertWordToPdfUsingLibre(string docxPath) => DocxHelper.ConvertWordToPdf(docxPath);
         private void SaveActionLog(SqliteConnection conn, SqliteTransaction tran, int debtorId, string type, decimal amount, string currency, string details)
         {
             var cmd = conn.CreateCommand();

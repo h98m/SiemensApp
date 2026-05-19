@@ -9,6 +9,7 @@ using Xceed.Words.NET;
 using System.IO;
 using Xceed.Document.NET; // ضروري جداً للتعرف على Cell و Row و Alignment
 using System.Diagnostics;
+using SiemensApp.Helpers;
 namespace SiemensApp.Views
 {
     // الكلاس الخاص ببيانات المديونين
@@ -693,21 +694,7 @@ namespace SiemensApp.Views
 
         private void ConvertToPdfWithLibreOffice(string sourceDocx, string outputDirectory)
         {
-            try
-            {
-                string libreOfficePath = Path.Combine(currentDirectory, "LibreOffice", "program", "soffice.exe");
-                if (!File.Exists(libreOfficePath)) return;
-                var info = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = libreOfficePath,
-                    Arguments = $"--headless --convert-to pdf \"{sourceDocx}\" --outdir \"{outputDirectory}\"",
-                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                };
-                using (var p = System.Diagnostics.Process.Start(info)) { p.WaitForExit(10000); }
-            }
-            catch { }
+            DocxHelper.ConvertWordToPdf(sourceDocx);
         }
 
         public string ToArabicWords(decimal number, bool isDinar)
@@ -782,11 +769,9 @@ namespace SiemensApp.Views
                 string templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "StatementTemplate.docx");
                 if (!File.Exists(templatePath)) { MessageBox.Show("حجي قالب StatementTemplate.docx غير موجود!"); return; }
 
-                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string pdfFolderPath = Path.Combine(desktopPath, "pdf");
-                if (!Directory.Exists(pdfFolderPath)) Directory.CreateDirectory(pdfFolderPath);
+                string pdfFolderPath = DocxHelper.EnsurePdfFolder();
 
-                string safeFileName = System.Text.RegularExpressions.Regex.Replace(selectedDebtForPay.DebtorName, @"[\\/:*?""<>|]", "_");
+                string safeFileName = DocxHelper.SanitizeFileName(selectedDebtForPay.DebtorName);
                 string fileName = $"كشف_حساب_{safeFileName}_{DateTime.Now:HH-mm}";
                 string docxPath = Path.Combine(pdfFolderPath, fileName + ".docx");
                 string pdfPath = Path.Combine(pdfFolderPath, fileName + ".pdf");
@@ -847,35 +832,7 @@ namespace SiemensApp.Views
             }
         }
 
-        // دالة مساعدة لتعبئة الخلايا بتنسيق مرتب (نفس اللي تستخدمها)
-        // لاحظ استخدام Xceed.Document.NET.Cell لضمان عدم حدوث خطأ
-        private void FillCell(Xceed.Document.NET.Cell cell, string text, double fontSize)
-        {
-            try
-            {
-                // بدل ما نمسح الحروف بالارقام، راح نمسح النص بالكامل بطريقة مباشرة
-                if (cell.Paragraphs.Count > 0)
-                {
-                    // الطريقة الأضمن لمسح النص القديم في Paragraph
-                    cell.Paragraphs[0].ReplaceText(cell.Paragraphs[0].Text, "");
-
-                    // إضافة النص الجديد
-                    var p = cell.Paragraphs[0].Append(text ?? "");
-                    p.Font(new Xceed.Document.NET.Font("Arabic Transparent"));
-                    p.FontSize(fontSize);
-                    p.Alignment = Xceed.Document.NET.Alignment.center;
-                }
-                else
-                {
-                    // في حال الخلية كانت فارغة تماماً وما بيها Paragraph
-                    var p = cell.InsertParagraph(text ?? "");
-                    p.Font(new Xceed.Document.NET.Font("Arabic Transparent"));
-                    p.FontSize(fontSize);
-                    p.Alignment = Xceed.Document.NET.Alignment.center;
-                }
-            }
-            catch { }
-        }
+        private void FillCell(Xceed.Document.NET.Cell cell, string text, double fontSize) => DocxHelper.FillCell(cell, text, fontSize);
         private string ToArabicWordsBase(long n, string[] ones, string[] tens, string[] hundreds)
         {
             string res = "";
